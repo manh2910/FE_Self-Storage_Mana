@@ -20,7 +20,7 @@ export default function StaffDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm">Xin chào, <strong>{user?.fullName}</strong></span>
-            <button onClick={handleLogout} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
+            <button onClick={() => { logout(); navigate('/') }} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
               Đăng xuất
             </button>
           </div>
