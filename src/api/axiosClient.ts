@@ -12,6 +12,9 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
+    if (token === 'demo-session') {
+      return Promise.reject(new Error('Preview sessions cannot call live APIs. Sign out of preview mode before using a real account.'))
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

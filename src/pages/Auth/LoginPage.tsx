@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { customerReturnPath } from '../../features/booking/returnPath'
 import { authApi } from '../../api/authApi'
 import { useAuth } from '../../hooks/useAuth'
 import { ROLE_HOME } from '../../routes/roleRoutes'
@@ -12,7 +13,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useAuth()
-
+  const [params] = useSearchParams()
+  const next = customerReturnPath(params.get('next'))
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : ''
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -29,9 +32,9 @@ export default function LoginPage() {
       }
       login(res.token, user)
       const home = ROLE_HOME[user.role] || '/'
-      navigate(home)
+      navigate(user.role === 'StorageCustomer' && next ? next : home)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
+      setError(err.response?.data?.message || 'Sign-in failed. Please check your details.')
     } finally {
       setLoading(false)
     }
@@ -52,8 +55,8 @@ export default function LoginPage() {
       {/* Auth Card */}
       <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-extrabold text-slate-900">Đăng nhập hệ thống</h1>
-          <p className="text-xs text-slate-500 mt-1">Hệ thống quản lý kho lưu trữ tự phục vụ chuyên nghiệp</p>
+          <h1 className="text-2xl font-extrabold text-slate-900">Sign in to your account</h1>
+          <p className="text-xs text-slate-500 mt-1">Professional self-storage management</p>
         </div>
 
         {error && (
@@ -64,7 +67,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email đăng nhập</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email address</label>
             <input
               type="email"
               required
@@ -75,7 +78,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Mật khẩu</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
             <input
               type="password"
               required
@@ -90,18 +93,20 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition shadow-md disabled:opacity-50 text-sm uppercase tracking-wider"
           >
-            {loading ? 'Đang xác thực...' : 'Đăng nhập'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+        <div className="mt-5 border-t border-slate-100 pt-5">
+        </div>
 
         <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <Link to="/" className="hover:text-orange-600 transition font-medium">
-            &larr; Về trang chủ
+            &larr; Back to home
           </Link>
           <p>
-            Chưa có tài khoản?{' '}
-            <Link to="/register" className="text-orange-600 hover:underline font-bold">
-              Đăng ký ngay
+            Do not have an account?{' '}
+            <Link to={`/register${nextQuery}`} className="text-orange-600 hover:underline font-bold">
+              Sign up now
             </Link>
           </p>
         </div>

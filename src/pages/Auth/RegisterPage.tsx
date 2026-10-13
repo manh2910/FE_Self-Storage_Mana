@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { customerReturnPath } from '../../features/booking/returnPath'
 import { authApi } from '../../api/authApi'
 
 export default function RegisterPage() {
@@ -13,6 +14,9 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = customerReturnPath(params.get('next'))
+  const loginPath = next ? `/login?next=${encodeURIComponent(next)}` : '/login'
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -25,10 +29,10 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await authApi.register(form)
-      setSuccess('Đăng ký tài khoản thành công! Đang chuyển hướng...')
-      setTimeout(() => navigate('/login'), 1500)
+      setSuccess('Account created! Redirecting...')
+      setTimeout(() => navigate(loginPath), 1500)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại. Email có thể đã tồn tại.')
+      setError(err.response?.data?.message || 'Registration failed. This email may already be registered.')
     } finally {
       setLoading(false)
     }
@@ -49,8 +53,8 @@ export default function RegisterPage() {
       {/* Auth Card */}
       <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-extrabold text-slate-900">Đăng ký tài khoản mới</h1>
-          <p className="text-xs text-slate-500 mt-1">Trở thành khách hàng thuê kho tự phục vụ</p>
+          <h1 className="text-2xl font-extrabold text-slate-900">Create an account</h1>
+          <p className="text-xs text-slate-500 mt-1">Start your self-storage journey</p>
         </div>
 
         {error && (
@@ -62,14 +66,14 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Họ và tên</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full name</label>
             <input
               name="fullName"
               required
               value={form.fullName}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:bg-white outline-none transition"
-              placeholder="Nguyễn Văn A"
+              placeholder="Alex Nguyen"
             />
           </div>
           <div>
@@ -85,7 +89,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Số điện thoại</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Phone number</label>
             <input
               name="phoneNumber"
               value={form.phoneNumber}
@@ -95,7 +99,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Mật khẩu</label>
+            <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Password</label>
             <input
               name="password"
               type="password"
@@ -112,18 +116,18 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition shadow-md disabled:opacity-50 text-sm uppercase tracking-wider"
           >
-            {loading ? 'Đang xử lý...' : 'Đăng ký'}
+            {loading ? 'Processing...' : 'Sign up'}
           </button>
         </form>
 
         <div className="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <Link to="/" className="hover:text-orange-600 transition font-medium">
-            &larr; Về trang chủ
+            &larr; Back to home
           </Link>
           <p>
-            Đã có tài khoản?{' '}
-            <Link to="/login" className="text-orange-600 hover:underline font-bold">
-              Đăng nhập
+            Already have an account?{' '}
+            <Link to={loginPath} className="text-orange-600 hover:underline font-bold">
+              Sign in
             </Link>
           </p>
         </div>

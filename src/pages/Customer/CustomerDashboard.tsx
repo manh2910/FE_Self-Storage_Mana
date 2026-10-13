@@ -1,179 +1,40 @@
-import { Link } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { storageUnits, money } from '../../features/booking/catalog'
+import { localToday, isDate } from '../../features/booking/domain'
+import './customer-booking.css'
 
 export default function CustomerDashboard() {
-  const { user } = useAuth()
-
-  return (
-    <div className="space-y-12">
-      {/* Hero Banner Section */}
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0B192C] to-[#1E3E62] text-white p-8 md:p-14 shadow-xl">
-        <div className="max-w-2xl relative z-10">
-          <span className="text-orange-400 font-semibold text-xs tracking-widest uppercase bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/25">
-            Self-Storage Made Simple
-          </span>
-          <h1 className="text-3xl md:text-5xl font-extrabold mt-4 leading-tight">
-            Không gian lưu trữ cho những gì <span className="text-orange-400">quan trọng nhất.</span>
-          </h1>
-          <p className="text-slate-300 mt-4 text-sm md:text-base leading-relaxed">
-            Xin chào <strong className="text-white">{user?.fullName}</strong>! Khám phá giải pháp thuê kho tự phục vụ sạch sẽ, an toàn và mức giá cạnh tranh nhất ngay hôm nay.
-          </p>
-
-          {/* Quick Search Bar */}
-          <div className="mt-8 bg-white p-3 rounded-2xl shadow-lg flex flex-col md:flex-row gap-3 text-slate-800">
-            <div className="flex-1 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase">Cơ sở kho</label>
-              <select className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none mt-0.5 cursor-pointer">
-                <option>Tất cả cơ sở tại TP.HCM</option>
-                <option>Cơ sở Quận 1 - TP.HCM</option>
-                <option>Cơ sở Thủ Đức - TP.HCM</option>
-              </select>
-            </div>
-            <div className="flex-1 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase">Kích thước kho</label>
-              <select className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none mt-0.5 cursor-pointer">
-                <option>Mọi kích thước</option>
-                <option>Kho nhỏ (5m²)</option>
-                <option>Kho trung bình (10m²)</option>
-                <option>Kho lớn (20m²)</option>
-                <option>Kho lạnh bảo quản</option>
-              </select>
-            </div>
-            <Link
-              to="/customer/browse"
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 flex items-center justify-center text-sm uppercase tracking-wide"
-            >
-              Tìm kho ngay
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Account Overview Stats với hiệu ứng hover nổi */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Kho đang thuê" value="0" subtitle="Đơn vị hoạt động" link="/customer/units" btnText="Quản lý" />
-        <StatCard title="Đơn đặt chỗ" value="0" subtitle="Chờ check-in / cọc" link="/customer/browse" btnText="Xem chỗ" />
-        <StatCard title="Hóa đơn chờ" value="0" subtitle="Cần thanh toán" link="/customer/payments" btnText="Thanh toán" />
-        <StatCard title="Yêu cầu hỗ trợ" value="0" subtitle="Ticket đang mở" link="/customer/support" btnText="Tạo ticket" />
-      </div>
-
-      {/* Popular Unit Sizes Section với hiệu ứng hover card */}
-      <div className="space-y-6">
-        <div className="text-center">
-          <span className="text-xs font-bold text-orange-600 uppercase tracking-widest">Storage Solutions For Every Need</span>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">Các loại kích thước kho phổ biến</h2>
-          <p className="text-slate-500 text-sm mt-1">Lựa chọn không gian phù hợp với nhu cầu lưu trữ thực tế của bạn</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <UnitSizeCard
-            size="5m² (Tiêu chuẩn nhỏ)"
-            desc="Phù hợp lưu trữ vali, thùng hàng cá nhân hoặc đồ đạc ít."
-            price="800.000đ"
-            flow="Flow 1"
-          />
-          <UnitSizeCard
-            size="10m² (Tiêu chuẩn trung bình)"
-            desc="Lưu trữ đồ đạc chuyển nhà phòng trọ hoặc hàng hóa kinh doanh nhỏ."
-            price="1.400.000đ"
-            flow="Flow 1"
-          />
-          <UnitSizeCard
-            size="20m² (Kho lớn)"
-            desc="Không gian rộng chứa nội thất gia đình lớn hoặc kho hàng doanh nghiệp."
-            price="2.500.000đ"
-            flow="Flow 1"
-          />
-          <UnitSizeCard
-            size="5m² (Kho lạnh chuyên dụng)"
-            desc="Bảo quản hàng hóa yêu cầu nhiệt độ ổn định, thực phẩm, dược phẩm."
-            price="1.500.000đ"
-            flow="Flow 1"
-          />
-        </div>
-      </div>
-
-      {/* Trust & Features Bar */}
-      <div className="bg-[#0B192C] text-white rounded-3xl p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        <FeatureItem
-          title="Bảo mật 24/7"
-          desc="Hệ thống camera giám sát hiện đại và bảo vệ túc trực an toàn tuyệt đối."
-        />
-        <FeatureItem
-          title="Truy cập dễ dàng"
-          desc="Giờ giấc linh hoạt, ra vào tự phục vụ bằng mã PIN hoặc thẻ từ cá nhân."
-        />
-        <FeatureItem
-          title="Nhận kho nhanh"
-          desc="Thủ tục nhanh chóng, hỗ trợ xe đẩy và thiết bị nâng hạ miễn phí tại cơ sở."
-        />
-        <FeatureItem
-          title="Hỗ trợ tận tâm"
-          desc="Đội ngũ nhân viên cơ sở luôn sẵn sàng hỗ trợ bạn trong mọi tình huống."
-        />
-      </div>
-    </div>
-  )
-}
-
-function StatCard({ title, value, subtitle, link, btnText }: { title: string; value: string; subtitle: string; link: string; btnText: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-lg hover:border-orange-300 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
-      <div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{title}</p>
-        <div className="flex items-baseline gap-3 mt-2">
-          <span className="text-3xl font-extrabold text-slate-900">{value}</span>
-          <span className="text-xs text-slate-500 font-medium">{subtitle}</span>
-        </div>
-      </div>
-      <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
-        <span className="text-xs text-slate-400">Trạng thái</span>
-        <Link to={link} className="text-xs font-bold text-orange-600 hover:text-orange-700 uppercase tracking-wide hover:translate-x-0.5 transition-transform">
-          {btnText} &rarr;
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-function UnitSizeCard({ size, desc, price, flow }: { size: string; desc: string; price: string; flow: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-orange-400 transition-all duration-300 transform hover:-translate-y-1.5 flex flex-col justify-between group">
-      <div>
-        <div className="flex justify-between items-start mb-3">
-          <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-lg group-hover:bg-orange-500 group-hover:text-white transition-colors duration-200">
-            {flow}
-          </span>
-          <span className="text-xs text-slate-400 font-medium">Khả dụng</span>
-        </div>
-        <h3 className="font-bold text-slate-900 text-lg mb-2 group-hover:text-orange-600 transition-colors">{size}</h3>
-        <p className="text-xs text-slate-500 leading-relaxed mb-4">{desc}</p>
-      </div>
-      <div>
-        <div className="mb-4">
-          <span className="text-xs text-slate-400 block">Giá từ</span>
-          <span className="text-xl font-extrabold text-slate-900">{price}</span>
-          <span className="text-xs text-slate-500">/tháng</span>
-        </div>
-        <Link
-          to="/customer/browse"
-          className="w-full block text-center py-2.5 bg-slate-900 hover:bg-orange-500 text-white font-semibold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-sm active:scale-95"
-        >
-          Xem chi tiết & Đặt
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-function FeatureItem({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="space-y-2 group">
-      <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 font-bold flex items-center justify-center mb-3 group-hover:bg-orange-500 group-hover:text-white transition-all duration-200">
-        ✓
-      </div>
-      <h4 className="font-bold text-white text-base group-hover:text-orange-400 transition-colors">{title}</h4>
-      <p className="text-xs text-slate-300 leading-relaxed">{desc}</p>
-    </div>
-  )
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const [location, setLocation] = useState(params.get('location') || '')
+  const [size, setSize] = useState(params.get('size') || '')
+  const [date, setDate] = useState(params.get('startDate') || localToday())
+  const [months, setMonths] = useState(() => { const value = Number(params.get('months')); return Number.isInteger(value) && value >= 1 && value <= 12 ? value : 1 })
+  const [error, setError] = useState('')
+  const [sort, setSort] = useState('recommended')
+  const units = storageUnits.filter(u => (!location || u.location === location) && (!size || u.size === size))
+  if (sort !== 'recommended') units.sort((a, b) => sort === 'low' ? a.monthlyPrice - b.monthlyPrice : b.monthlyPrice - a.monthlyPrice)
+  const validDate = isDate(date) && date >= localToday()
+  function continueBooking(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    const unit = units.find(u => u.id === submitter?.value && u.available)
+    if (!unit) { setError('Choose a storage unit to continue.'); return }
+    if (!validDate) { setError('Choose a start date on or after today.'); return }
+    navigate(`/customer/book/${unit.id}?startDate=${encodeURIComponent(date)}&months=${months}`)
+  }
+  return <div className="customer-booking">
+    <div className="cb-breadcrumb"><Link to="/">Home</Link><span aria-hidden="true">/</span><span>Booking</span></div>
+    <section className="cb-hero"><div><span className="cb-eyebrow">BOOK STORAGE ONLINE</span><h1>More space.<br />Less stress, every day.</h1><p>Find a space for your belongings, choose your rental period and book in a few steps.</p><div className="cb-benefits"><span>✓ Flexible monthly rentals</span><span>✓ Clear costs</span><span>✓ Support when needed</span></div></div><img src="/images/storage-hero.webp" alt="Storage space for your belongings at SelfStorage" /></section>
+    <ol className="cb-steps" aria-label="Booking steps"><li aria-current="step"><b>01</b><div>Choose your space<small>Unit & rental period</small></div></li><li><b>02</b><div>Customer details<small>Contact details</small></div></li><li><b>03</b><div>Confirm booking<small>Review your booking</small></div></li></ol>
+    <form onSubmit={continueBooking}>
+      <div className="cb-filters"><label>Location<select value={location} onChange={e => { setLocation(e.target.value) }}><option value="">All locations</option><option value="district-1">District 1, Ho Chi Minh City</option><option value="thu-duc">Thu Duc, Ho Chi Minh City</option></select></label><label>Unit size<select value={size} onChange={e => { setSize(e.target.value) }}><option value="">All sizes</option><option value="small">Small · 5 m²</option><option value="medium">Medium · 10 m²</option><option value="large">Large · 20 m²</option></select></label><label>Start date<input type="date" required min={localToday()} value={date} onChange={e => { setDate(e.target.value); setError('') }} /></label><label>Rental duration<select value={months} onChange={e => setMonths(Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1} {i === 0 ? 'month' : 'months'}</option>)}</select></label></div>
+      {error && <p className="cb-error" role="alert">{error}</p>}
+      <div className="cb-layout"><section aria-labelledby="cb-results"><div className="cb-results-heading"><div><h2 id="cb-results">Choose your storage unit</h2><p role="status">{units.length} matching spaces · Sample prices</p></div><label><span className="cb-sr-only">Sort units</span><select value={sort} onChange={e => setSort(e.target.value)}><option value="recommended">Recommended</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></label></div>
+      <div className="cb-grid">{units.map(u => <article key={u.id} className="cb-card"><div className="cb-photo"><img src={u.image} alt={u.name} loading="lazy" /><span>{u.available ? 'Available to select' : 'Not accepting bookings'}</span></div><div className="cb-card-body"><small>{u.facility}</small><h3>{u.name}</h3><div className="cb-tags"><span>{u.area} m²</span><span>{u.type === 'cold' ? 'Cold storage' : 'Standard storage'}</span></div><p>{u.description}</p><div className="cb-card-bottom"><div><strong>{money(u.monthlyPrice)}</strong><small>/ month</small></div><button type="submit" value={u.id} disabled={!u.available}>Choose unit</button></div></div></article>)}</div>
+      {!units.length && <div className="cb-empty"><h3>No matching units</h3><p>Try a different location or size.</p><button type="button" onClick={() => { setLocation(''); setSize('') }}>Clear filters</button></div>}</section>
+</div>
+    </form>
+  </div>
 }

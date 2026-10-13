@@ -1,39 +1,52 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import SiteHeader from './components/layout/SiteHeader'
 import HomePage from './pages/Home/HomePage'
-import LoginPage from './pages/Auth/LoginPage'
-import RegisterPage from './pages/Auth/RegisterPage'
-import CustomerLayout from './components/layout/CustomerLayout'
 import CustomerDashboard from './pages/Customer/CustomerDashboard'
 import StaffDashboard from './pages/Staff/StaffDashboard'
 import ManagerDashboard from './pages/Manager/ManagerDashboard'
 import OperationsDashboard from './pages/Operations/OperationsDashboard'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import PublicStorageLayout from './features/discovery/PublicStorageLayout'
+import { FacilitiesPage, FacilityDetailsPage, StorageUnitDetailsPage, PricingSizeGuidePage, HowItWorksPage } from './features/discovery/DiscoveryPages'
+import { BookingCheckoutPage, BookingConfirmationPage, CustomerBookingsPage, CustomerPaymentsPage } from './features/booking/BookingPages'
 
 function App() {
   return (
+    <>
+    <SiteHeader />
     <Routes>
-      {/* Trang chủ công khai - Hiển thị mặc định khi truy cập ứng dụng (/) */}
+      {/* Home công khai - Hiển thị mặc định khi truy cập ứng dụng (/) */}
       <Route path="/" element={<HomePage />} />
+      <Route element={<PublicStorageLayout />}>
+        <Route path="/facilities" element={<FacilitiesPage />} />
+        <Route path="/facilities/:facilityId" element={<FacilityDetailsPage />} />
+        <Route path="/storage/:unitId" element={<StorageUnitDetailsPage />} />
+        <Route path="/pricing" element={<PricingSizeGuidePage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/faq" element={<Navigate to="/how-it-works#faq" replace />} />
+        <Route path="/storage" element={<CustomerDashboard />} />
+        <Route path="/booking" element={<CustomerDashboard />} />
+      </Route>
 
       {/* Các trang xác thực */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<Navigate to="/booking" replace />} />
+      <Route path="/register" element={<Navigate to="/booking" replace />} />
 
       {/* Customer Portal (Sử dụng CustomerLayout không có 's' ở layout) */}
       <Route
         path="/customer/*"
         element={
-          <ProtectedRoute allowedRoles={['StorageCustomer']}>
-            <CustomerLayout />
-          </ProtectedRoute>
+          <PublicStorageLayout />
         }
       >
         <Route index element={<CustomerDashboard />} />
-        <Route path="browse" element={<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h2 className="text-xl font-bold text-slate-900">Tìm & Đặt chỗ kho</h2><p className="text-slate-500 mt-2 text-sm">Tính năng đang phát triển theo Flow 1.</p></div>} />
-        <Route path="units" element={<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h2 className="text-xl font-bold text-slate-900">Kho đang thuê của tôi</h2><p className="text-slate-500 mt-2 text-sm">Tính năng đang phát triển theo Flow 3 & 6.</p></div>} />
-        <Route path="payments" element={<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h2 className="text-xl font-bold text-slate-900">Lịch sử thanh toán</h2><p className="text-slate-500 mt-2 text-sm">Tính năng đang phát triển theo Flow 4.</p></div>} />
-        <Route path="support" element={<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h2 className="text-xl font-bold text-slate-900">Yêu cầu hỗ trợ</h2><p className="text-slate-500 mt-2 text-sm">Tính năng đang phát triển theo Flow 7.</p></div>} />
+        <Route path="book/:unitId" element={<BookingCheckoutPage />} />
+        <Route path="bookings/:bookingId" element={<BookingConfirmationPage />} />
+        <Route path="browse" element={<CustomerDashboard />} />
+        <Route path="units" element={<CustomerBookingsPage />} />
+        <Route path="payments" element={<CustomerPaymentsPage />} />
+        <Route path="support" element={<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h2 className="text-xl font-bold text-slate-900">Request support</h2><p className="text-slate-500 mt-2 text-sm">Support requests are under development. Call 0909 149 563 for assistance.</p></div>} />
       </Route>
 
       {/* Staff Portal */}
@@ -79,7 +92,9 @@ function App() {
       {/* Các đường dẫn không hợp lệ sẽ tự động điều hướng về Home Page */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
 
 export default App
+

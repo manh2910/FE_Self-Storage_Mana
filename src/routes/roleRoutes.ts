@@ -13,9 +13,9 @@ export const ROLE_HOME: Record<UserRole, string> = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  StorageCustomer: 'Khách hàng thuê kho',
-  FacilityStaff: 'Nhân viên cơ sở',
-  FacilityManager: 'Quản lý cơ sở',
-  BusinessOperationsManager: 'Quản lý vận hành',
-  SystemAdministrator: 'Quản trị hệ thống',
+  StorageCustomer: 'Storage customer',
+  FacilityStaff: 'Facility staff',
+  FacilityManager: 'Facility management',
+  BusinessOperationsManager: 'Operations management',
+  SystemAdministrator: 'System administration',
 };
