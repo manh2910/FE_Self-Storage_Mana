@@ -1,41 +1,27 @@
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { managerSections, ManagerIcon, managerSectionPath } from './managerNavigation'
+import './ManagerDashboard.css'
+import { loadWorkspace, reports } from './facilityWorkspace'
 
 export default function ManagerDashboard() {
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Manage your assigned facility</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage units, assign staff and monitor facility revenue.</p>
-          </div>
-          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg border border-blue-200">
-            Branch: Ho Chi Minh City Main
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <ManagerCard title="Storage unit management" desc="Configure unit types, sizes, locations, rental prices and status." flow="Flow 5" />
-          <ManagerCard title="Assign units to customers" desc="Assign a specific storage unit based on booking type and rental period." flow="Flow 1, 2" />
-          <ManagerCard title="Contracts & Payments" desc="Track current customers, agreement periods and payment status." flow="Flow 3, 4" />
-          <ManagerCard title="Handover, Move-out & Renewal" desc="Manage handovers, move-outs, renewals and overdue rentals." flow="Flow 2, 6" />
-          <ManagerCard title="Staff assignments" desc="Assign staff shifts for handover, inspections and incident support." flow="Flow 5, 7" />
-          <ManagerCard title="Facility reports" desc="View occupancy, revenue and overdue rental reports." flow="Flow 4, 5" />
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function ManagerCard({ title, desc, flow }: { title: string; desc: string; flow: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-orange-300 transition cursor-pointer group">
-      <div className="flex justify-between items-start mb-3">
-        <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-lg">{flow}</span>
-      </div>
-      <h3 className="font-bold text-slate-900 text-base mb-2 group-hover:text-orange-600 transition-colors">{title}</h3>
-      <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
-    </div>
-  )
+  const { hash } = useLocation()
+  const [overview] = useState(() => { try { return reports(loadWorkspace(localStorage)) } catch { return null } })
+  const section = managerSections.find(item => item.id === hash.slice(1))
+  useEffect(() => { const previous = document.title; document.title = 'Facility Manager — SelfStorage'; return () => { document.title = previous } }, [])
+  if (section) return <Navigate to={managerSectionPath(section.id)} replace />
+  return <div className="fm-page">
+    <main className="fm-container">
+      <div className="fm-context"><Link to="/manager">Facility Manager</Link><span>/</span><span>Overview</span><span className="fm-demo">Dữ liệu minh họa</span></div>
+      <section className="fm-hero">
+        <div className="fm-hero-copy"><span className="fm-eyebrow">YOUR FACILITY. ONE WORKSPACE.</span><h1>Không gian của bạn.<br /><em>Quản lý theo cách bạn.</em></h1><p>Chào Facility Manager, quản lý kho, kết nối đội ngũ và theo dõi hoạt động cơ sở từ một nơi.</p><div className="fm-hero-actions"><Link className="ds-button" to="/manager/units">Quản lý kho <ManagerIcon name="arrow" size={17} /></Link><Link className="ds-button secondary" to="/manager/reports">Xem báo cáo</Link></div><div className="fm-facility">District 1 <span>·</span> Ho Chi Minh City <span className="fm-status">Cơ sở minh họa</span></div></div>
+        <div className="fm-hero-image"><img src="/images/storage-hero.webp" alt="Không gian kho SelfStorage với các dãy kho riêng biệt" /><div className="fm-image-note"><span className="fm-icon"><ManagerIcon name="box" /></span><div><strong>Mọi hoạt động trong tầm tay</strong><p>Kho · Khách thuê · Đội ngũ</p></div></div></div>
+      </section>
+      {overview ? <section className="fm-stats" aria-label="Tổng quan cơ sở">{[['box', 'Tổng số kho', String(overview.total), `${overview.available} kho còn trống`], ['key', 'Tỷ lệ sử dụng', `${overview.total ? Math.round(overview.rented / overview.total * 100) : 0}%`, `${overview.rented} kho đang thuê`], ['card', 'Doanh thu đã thanh toán', new Intl.NumberFormat('vi-VN').format(overview.revenue) + ' ₫', 'Tổng trong dữ liệu demo'], ['calendar', 'Hợp đồng quá hạn', String(overview.overdue.length), 'Cần theo dõi và xử lý']].map(([icon, label, value, note]) => <article key={label}><span className="fm-icon"><ManagerIcon name={icon} /></span><p>{label}</p><strong>{value}</strong><small>{note}</small></article>)}</section> : <p role="alert">Không thể đọc dữ liệu cơ sở đã lưu.</p>}
+      <section className="fm-workspace" aria-labelledby="workspace-title"><div className="fm-section-heading"><div><span className="fm-eyebrow">FACILITY WORKSPACE</span><h2 id="workspace-title">Một cơ sở. Sáu công cụ quản lý.</h2><p>Chọn chức năng để xem và quản lý từng hoạt động tại cơ sở.</p></div></div>
+      <div className="fm-function-grid">{managerSections.map((item, index) => <Link to={managerSectionPath(item.id)} className="fm-function" key={item.id}><div className="fm-function-top"><span className="fm-icon"><ManagerIcon name={item.icon} /></span><span className="fm-number">0{index + 1}</span></div><h3>{item.title}</h3><p>{item.description}</p><span className="fm-card-link">Mở {item.short.toLowerCase()} <ManagerIcon name="arrow" size={17} /></span></Link>)}</div>
+      </section>
+      <aside className="fm-bottom"><div><span className="fm-eyebrow">BUILT FOR YOUR EVERYDAY</span><h2>Vận hành liền mạch, từ kho đến con người.</h2><p>Giữ mọi hoạt động của cơ sở rõ ràng và dễ theo dõi.</p></div><ManagerIcon name="box" size={90} /></aside>
+    </main><footer className="fm-footer"><div className="fm-container"><strong>SelfStorage<span>.</span></strong><p>Facility Manager Workspace</p><small>© {new Date().getFullYear()} SelfStorage. All rights reserved.</small></div></footer>
+  </div>
 }

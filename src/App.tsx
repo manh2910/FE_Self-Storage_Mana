@@ -4,6 +4,8 @@ import HomePage from './pages/Home/HomePage'
 import CustomerDashboard from './pages/Customer/CustomerDashboard'
 import StaffDashboard from './pages/Staff/StaffDashboard'
 import ManagerDashboard from './pages/Manager/ManagerDashboard'
+import StorageUnitsPage from './pages/Manager/StorageUnitsPage'
+import FacilityWorkspacePage from './pages/Manager/FacilityWorkspacePages'
 import OperationsDashboard from './pages/Operations/OperationsDashboard'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import ProtectedRoute from './components/common/ProtectedRoute'
@@ -29,9 +31,9 @@ function App() {
         <Route path="/booking" element={<CustomerDashboard />} />
       </Route>
 
-      {/* Các trang xác thực */}
-      <Route path="/login" element={<Navigate to="/booking" replace />} />
-      <Route path="/register" element={<Navigate to="/booking" replace />} />
+      {/* Authentication is temporarily disabled while previewing the two interfaces. */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/register" element={<Navigate to="/" replace />} />
 
       {/* Customer Portal (Sử dụng CustomerLayout không có 's' ở layout) */}
       <Route
@@ -59,14 +61,17 @@ function App() {
         }
       />
 
-      {/* Manager Portal */}
+      {/* Temporary FM interface preview; restore role protection with authentication. */}
+      <Route path="/manager/units" element={<StorageUnitsPage />} />
+      <Route path="/manager/assign" element={<FacilityWorkspacePage mode="assign" />} />
+      <Route path="/manager/rentals" element={<FacilityWorkspacePage mode="rentals" />} />
+      <Route path="/manager/operations" element={<FacilityWorkspacePage mode="operations" />} />
+      <Route path="/manager/staff" element={<FacilityWorkspacePage mode="staff" />} />
+      <Route path="/manager/reports" element={<FacilityWorkspacePage mode="reports" />} />
+
       <Route
         path="/manager/*"
-        element={
-          <ProtectedRoute allowedRoles={['FacilityManager']}>
-            <ManagerDashboard />
-          </ProtectedRoute>
-        }
+        element={<ManagerDashboard />}
       />
 
       {/* Operations Portal */}

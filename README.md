@@ -31,3 +31,18 @@ Kiểm thử bao gồm tính tiền, tháng lịch/năm nhuận, dữ liệu kh�
 ### Khi có backend
 
 `src/features/booking/catalog.ts` chứa danh mục mẫu. `domain.ts` tách quy tắc minh họa và repository lưu trữ local khỏi giao diện trong `BookingPages.tsx`. Thay danh mục và repository bằng API theo Swagger thực tế. Backend phải kiểm tra quyền sở hữu đơn, tồn kho đồng thời, giá/chính sách chính thức, idempotency, hợp đồng và trạng thái thanh toán từ gateway. Không dùng trạng thái local hoặc nút thanh toán demo để xác nhận giao dịch thật.
+
+## Facility Manager demo
+
+Nhấn **FM** trên header để mở giao diện quản lý không cần đăng nhập. `/login` và `/register` tạm chuyển về HomePage.
+
+- `/manager/units`: thêm, sửa, tìm kiếm và vô hiệu hóa kho. Kho có hợp đồng đang hoạt động không được đổi loại, diện tích hoặc trạng thái trực tiếp.
+- `/manager/assign`: chọn đơn đặt và kho phù hợp theo loại, diện tích, thời hạn và tình trạng còn trống. Có thể đổi kho chờ bàn giao; kho cũ chuyển sang bảo trì.
+- `/manager/rentals`: danh sách kho khách thuê, hợp đồng, ngày thuê, sắp hết hạn trong 7 ngày, quá hạn và trạng thái thanh toán chỉ đọc.
+- `/manager/operations`: ghi nhận bàn giao, trả kho, gia hạn và giao nhiệm vụ hỗ trợ hoặc xử lý quá hạn. Facility Staff thực hiện, FM điều phối và ghi nhận kết quả trong demo.
+- `/manager/staff`: danh sách nhân viên cơ sở, giao việc, đổi người phụ trách, hạn xử lý và tiến độ. Chưa có phân ca.
+- `/manager/reports`: thống kê kho, tỷ lệ sử dụng, tổng tiền mẫu của các hợp đồng đã thanh toán và danh sách quá hạn.
+
+Dữ liệu cơ sở District 1 lưu trong `selfstorage:fm-workspace:v1`. Dữ liệu kho cũ tại `selfstorage:fm-units:v1` được đọc khi chưa có workspace. Dữ liệu FM không đồng bộ với luồng đặt kho khách hàng hay backend. Doanh thu là tổng khoản mẫu có trạng thái Đã thanh toán, không phải báo cáo kế toán hoặc giao dịch thật. Không có thao tác cho FM tự xác nhận thanh toán.
+
+Kiểm tra: `npm run test:manager-units`, `npm run test:facility-workspace`, `npx tsc --noEmit`.
