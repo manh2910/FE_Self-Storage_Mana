@@ -1,59 +1,36 @@
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { managerSections, ManagerIcon, managerSectionPath } from './managerNavigation'
+import { loadWorkspace, reports, type Workspace } from './facilityWorkspace'
+import { unitStatuses } from './storageUnits'
 
-export default function ManagerDashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <header className="bg-[#0B192C] text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold">Facility Manager Portal</h1>
-            <p className="text-xs text-orange-400">Quản lý chi nhánh / cơ sở kho</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm">Xin chào, <strong>{user?.fullName}</strong></span>
-            <button onClick={() => { logout(); navigate('/') }} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Quản trị cơ sở được phân công</h2>
-            <p className="text-sm text-slate-500 mt-1">Quản lý toàn bộ đơn vị kho, phân công nhân viên và giám sát doanh thu cơ sở.</p>
-          </div>
-          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg border border-blue-200">
-            Chi nhánh: TP.HCM Main
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <ManagerCard title="Quản lý đơn vị kho" desc="Cấu hình loại kho, kích thước, vị trí, giá thuê và trạng thái từng unit." flow="Flow 5" />
-          <ManagerCard title="Gán kho cho khách" desc="Thực hiện gán storage unit cụ thể cho khách dựa trên loại và thời gian đặt." flow="Flow 1, 2" />
-          <ManagerCard title="Hợp đồng & Thanh toán" desc="Theo dõi danh sách khách hàng hiện tại, thời hạn hợp đồng và trạng thái thanh toán." flow="Flow 3, 4" />
-          <ManagerCard title="Bàn giao, Trả & Gia hạn" desc="Quản lý toàn diện quy trình bàn giao, trả kho, gia hạn và xử lý quá hạn." flow="Flow 2, 6" />
-          <ManagerCard title="Phân công nhân viên" desc="Phân công nhân viên trực ca hỗ trợ bàn giao, kiểm tra và xử lý sự cố." flow="Flow 5, 7" />
-          <ManagerCard title="Báo cáo cơ sở" desc="Xem thống kê tỷ lệ sử dụng kho, doanh thu và các trường hợp quá hạn." flow="Flow 4, 5" />
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function ManagerCard({ title, desc, flow }: { title: string; desc: string; flow: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-orange-300 transition cursor-pointer group">
-      <div className="flex justify-between items-start mb-3">
-        <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-lg">{flow}</span>
-      </div>
-      <h3 className="font-bold text-slate-900 text-base mb-2 group-hover:text-orange-600 transition-colors">{title}</h3>
-      <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
-    </div>
-  )
+const button='inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-700'
+const statusColors:Record<string,string>={Available:'bg-emerald-500',Occupied:'bg-blue-600',Cleaning:'bg-amber-400',Maintenance:'bg-orange-500',Deactivated:'bg-slate-400'}
+const statusBadges:Record<string,string>={Available:'bg-emerald-50 text-emerald-700',Occupied:'bg-blue-50 text-blue-700',Cleaning:'bg-amber-50 text-amber-800',Maintenance:'bg-orange-50 text-orange-800',Deactivated:'bg-slate-100 text-slate-600'}
+export default function ManagerDashboard(){
+  const {hash}=useLocation()
+  const [data,setData]=useState<{workspace:Workspace|null;error:string}>(()=>{try{return {workspace:loadWorkspace(localStorage),error:''}}catch{return {workspace:null,error:'Unable to load facility data. Check browser storage and refresh.'}}})
+  const [filter,setFilter]=useState('')
+  const [search,setSearch]=useState('')
+  const [updated,setUpdated]=useState(()=>new Date())
+  const section=managerSections.find(item=>item.id===hash.slice(1))
+  function refresh(){try{setData({workspace:loadWorkspace(localStorage),error:''});setUpdated(new Date())}catch{setData({workspace:null,error:'Unable to load facility data. Existing data has been preserved.'})}}
+  useEffect(()=>{const title=document.title;document.title='Facility Overview — SelfStorage';window.addEventListener('storage',refresh);window.addEventListener('focus',refresh);return()=>{document.title=title;window.removeEventListener('storage',refresh);window.removeEventListener('focus',refresh)}},[])
+  if(section)return <Navigate to={managerSectionPath(section.id)} replace/>
+  const w=data.workspace
+  const stats=w?reports(w):null
+  const units=w?.units.filter(unit=>(!filter||unit.status===filter)&&`${unit.code} ${unit.location} ${unit.type}`.toLowerCase().includes(search.toLowerCase()))||[]
+  const metrics=stats?[
+    {title:'Total units',value:stats.total,status:'',note:'All units at this facility',icon:'box',color:'text-slate-800 bg-slate-100'},
+    {title:'Available units',value:stats.available,status:'Available',note:'Ready for a new reservation',icon:'key',color:'text-emerald-700 bg-emerald-50'},
+    {title:'Rented units',value:stats.rented,status:'Occupied',note:'Allocated or currently occupied',icon:'users',color:'text-blue-700 bg-blue-50'},
+    {title:'Units being cleaned',value:stats.cleaning,status:'Cleaning',note:'Preparing for the next customer',icon:'cleaning',color:'text-amber-700 bg-amber-50'},
+  ]:[]
+  return <div className="min-h-[calc(100vh-130px)] bg-slate-50 text-slate-900 [&_:is(a,button,input,select):focus-visible]:outline-2 [&_:is(a,button,input,select):focus-visible]:outline-blue-600 [&_:is(a,button,input,select):focus-visible]:outline-offset-4"><main className="mx-auto max-w-[1200px] px-5 pb-16 pt-7 sm:px-6"><div className="mb-7 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500"><span>Facility Manager <span className="mx-2">/</span> Overview</span><span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5">District 1 · Ho Chi Minh City</span></div>
+    <header className="mb-8 flex flex-wrap items-start justify-between gap-5"><div><p className="text-[10px] font-bold tracking-[0.2em] text-blue-600">FACILITY REPORT</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Facility overview</h1><p className="mt-3 text-sm text-slate-500">A summary of storage availability, rentals and cleaning at your facility.</p></div><div className="flex flex-wrap gap-3"><button className={button} onClick={refresh}>Refresh report</button><Link className={`${button} !border-blue-600 !bg-blue-600 !text-white`} to="/manager/units">Manage units <ManagerIcon name="arrow" size={16}/></Link></div></header>
+    {data.error&&<p role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{data.error}</p>}
+    {stats&&<><section aria-label="Facility unit totals" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(metric=><button key={metric.title} aria-pressed={filter===metric.status} onClick={()=>setFilter(metric.status)} className={`rounded-2xl border bg-white p-5 text-left transition-shadow hover:shadow-md ${filter===metric.status?'border-blue-400 ring-1 ring-blue-100':'border-slate-200'}`}><div className="flex items-center justify-between gap-3"><span className="text-sm font-medium text-slate-500">{metric.title}</span><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${metric.color}`}><ManagerIcon name={metric.icon} size={20}/></span></div><strong className="mt-4 block text-4xl font-bold tracking-tight">{metric.value}</strong><span className="mt-3 block text-xs text-slate-500">{metric.note}</span></button>)}</section>
+    <section className="my-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" aria-labelledby="distribution-title"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 id="distribution-title" className="text-lg font-bold">Unit status distribution</h2><p className="mt-1 text-xs text-slate-500">Occupancy rate: {stats.total?Math.round(stats.rented/stats.total*100):0}% of all units</p></div><p className="text-xs text-slate-500">{stats.total} units in total</p></div><div aria-hidden="true" className="my-6 flex h-4 overflow-hidden rounded-full bg-slate-100">{unitStatuses.map(status=>{const count=w!.units.filter(u=>u.status===status).length;return <span key={status} className={statusColors[status]} style={{width:`${stats.total?count/stats.total*100:0}%`}}/>})}</div><div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{unitStatuses.map(status=>{const count=w!.units.filter(u=>u.status===status).length;return <button className="flex min-h-11 items-center gap-2 text-left text-xs text-slate-600" key={status} onClick={()=>setFilter(status)}><span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusColors[status]}`}/><span>{status}</span><strong className="ml-auto text-slate-900">{count}</strong></button>})}</div><p className="mt-4 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-500">Cleaning units are unavailable for new reservations. Maintenance and deactivated units are included in the total and shown separately.</p></section>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white" aria-labelledby="units-title"><div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6"><div><h2 id="units-title" className="text-lg font-bold">{filter?`${filter} units`:'All storage units'}</h2><p className="mt-1 text-xs text-slate-500">{units.length} matching units · District 1</p></div><Link to="/manager/units" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-blue-600">View unit management <ManagerIcon name="arrow" size={16}/></Link></div><div className="grid gap-4 border-y border-slate-200 bg-slate-50 p-5 sm:grid-cols-2"><label className="text-xs font-semibold text-slate-600">Search units<input type="search" className="mt-2 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm" placeholder="Unit code, type or location" value={search} onChange={e=>setSearch(e.target.value)}/></label><label className="text-xs font-semibold text-slate-600">Unit status<select className="mt-2 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm" value={filter} onChange={e=>setFilter(e.target.value)}><option value="">All statuses</option>{unitStatuses.map(status=><option key={status}>{status}</option>)}</select></label></div><div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Unit','Type','Area','Location','Monthly rent','Status'].map(heading=><th scope="col" className="px-5 py-4 font-semibold" key={heading}>{heading}</th>)}</tr></thead><tbody>{units.map(unit=><tr className="border-t border-slate-100" key={unit.id}><td className="px-5 py-4 font-semibold">{unit.code}</td><td className="px-5 py-4">{unit.type}</td><td className="px-5 py-4">{unit.area} m²</td><td className="px-5 py-4 text-slate-500">{unit.location}</td><td className="px-5 py-4">{new Intl.NumberFormat('en-GB',{style:'currency',currency:'VND'}).format(unit.price)}</td><td className="px-5 py-4"><span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusBadges[unit.status]}`}>{unit.status}</span></td></tr>)}</tbody></table>{!units.length&&<p className="p-6 text-sm text-slate-500">No units match the selected filters.</p>}</div></section><p className="mt-5 text-xs text-slate-500">Browser demo data · Updated {updated.toLocaleTimeString('en-GB')} · Use Refresh report to reload saved changes.</p></>}
+  </main></div>
 }

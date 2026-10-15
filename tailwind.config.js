@@ -6,6 +6,16 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['Georgia', 'serif'],
+      },
+      keyframes: {
+        'cb-enter': { from: { opacity: '0', transform: 'translateY(12px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        'cb-pulse': { '50%': { opacity: '.55' } },
+        'cb-step-in': { from: { boxShadow: '0 0 0 0 #eff6ff' }, to: { boxShadow: '0 0 0 5px #eff6ff' } },
+        'cb-line-in': { from: { transform: 'scaleX(0)' }, to: { transform: 'scaleX(1)' } },
+      },
       colors: {
         primary: {
           50: '#eff6ff',

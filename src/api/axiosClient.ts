@@ -12,6 +12,9 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
+    if (token === 'demo-session') {
+      return Promise.reject(new Error('Preview sessions cannot call live APIs. Sign out of preview mode before using a real account.'))
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -26,7 +29,7 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !/\/auth\/(login|register)(?:[/?]|$)/.test(error.config?.url || '')) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'

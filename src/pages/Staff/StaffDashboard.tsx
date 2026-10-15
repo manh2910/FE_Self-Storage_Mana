@@ -1,49 +1,26 @@
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
 
 export default function StaffDashboard() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <header className="bg-[#0B192C] text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold">Facility Staff Portal</h1>
-            <p className="text-xs text-orange-400">Nhân viên trực cơ sở kho</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm">Xin chào, <strong>{user?.fullName}</strong></span>
-            <button onClick={() => { logout(); navigate('/') }} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-      </header>
+
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Nhiệm vụ trực ca hôm nay</h2>
-            <p className="text-sm text-slate-500 mt-1">Xử lý check-in khách hàng, bàn giao mã truy cập và kiểm tra tình trạng trả kho.</p>
+            <h2 className="text-xl font-bold text-slate-900">Today’s shift tasks</h2>
+            <p className="text-sm text-slate-500 mt-1">Handle check-in, access handover and move-out inspections.</p>
           </div>
           <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-lg border border-green-200">
-            Ca trực: Hoạt động
+            Shift: Active
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StaffCard title="Check-in & Bàn giao kho" desc="Xác nhận reservation, cấp mã PIN, thẻ khóa cho khách đến nhận unit." flow="Flow 2" />
-          <StaffCard title="Danh sách khách hôm nay" desc="Theo dõi danh sách khách cần nhận kho, trả kho hoặc cần hỗ trợ trong ngày." flow="Flow 2, 7" />
-          <StaffCard title="Cập nhật trạng thái kho" desc="Đổi trạng thái unit sang Occupied, Maintenance, Cleaning sau khi kiểm tra." flow="Flow 2, 5" />
-          <StaffCard title="Xử lý sự cố tại chỗ" desc="Hỗ trợ vấn đề mất khóa, lỗi mã truy cập, hư hỏng thiết bị hoặc ticket phát sinh." flow="Flow 7" />
-          <StaffCard title="Kiểm tra khi trả kho" desc="Ghi nhận tình trạng thiết bị, đánh giá mức độ hư hại và tính phí phạt nếu có." flow="Flow 6" />
+          <StaffCard title="Check-in & Unit Handover" desc="Confirm reservations and issue access PINs or key cards during check-in." flow="Flow 2" />
+          <StaffCard title="Today’s customers" desc="Track customers arriving for check-in, move-out or support today." flow="Flow 2, 7" />
+          <StaffCard title="Update unit status" desc="Update units to Occupied, Maintenance or Cleaning after inspection." flow="Flow 2, 5" />
+          <StaffCard title="On-site incident support" desc="Help with lost keys, access issues, damaged equipment and support tickets." flow="Flow 7" />
+          <StaffCard title="Move-out inspection" desc="Record equipment condition, assess damage and any applicable charges." flow="Flow 6" />
         </div>
       </main>
     </div>
