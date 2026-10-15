@@ -6,6 +6,12 @@ npm i
 
 npm run dev
 
+## Quy ước giao diện
+
+Dùng class Tailwind CSS trong component `.tsx` cho toàn project, bao gồm responsive, hover/focus và reduced motion. Các chuỗi class dùng lặp lại được đặt trong hằng `styles` ngay tại file component. Không tạo file CSS hoặc HTML riêng cho từng trang/component.
+
+`src/index.css` chỉ chứa ba chỉ thị Tailwind. `tailwind.config.js` chứa font, màu và keyframe dùng chung. `index.html` ở thư mục gốc là entry bắt buộc của Vite.
+
 ## Luồng đặt kho khách hàng (frontend demo)
 
 - `/storage`: danh sách kho mẫu, lọc địa điểm/kích thước/loại kho, chọn ngày và sắp xếp giá.

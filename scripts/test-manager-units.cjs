@@ -9,13 +9,20 @@ const js = ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions:
 const loaded = new Module(filename, module)
 loaded.filename = filename
 loaded.paths = module.paths
+loaded.require = request => {
+  if (request !== './managerStorage') return require(request)
+  const parserPath = path.resolve(__dirname, '../src/pages/Manager/managerStorage.ts')
+  const parser = new Module(parserPath, module)
+  parser._compile(ts.transpileModule(readFileSync(parserPath, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, parserPath)
+  return parser.exports
+}
 loaded._compile(js, filename)
 const { readUnits, writeUnits, validateUnit } = loaded.exports
 function setup() {
   const values = new Map()
   return { values, storage: { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) } }
 }
-const draft = { code: 'C-301', type: 'Small', area: 5, location: 'Tầng 3 · Khu C', price: 850000, status: 'Còn trống' }
+const draft = { code: 'C-301', type: 'Small', area: 5, location: 'Tầng 3 · Khu C', price: 850000, status: 'Available' }
 test('Unit codes reject case-insensitive duplicates but allow editing the same unit', () => {
   const { storage } = setup()
   const units = readUnits(storage)
@@ -35,13 +42,13 @@ test('Add, edit, deactivate and reactivate persist across reloads', () => {
   let units = [...readUnits(storage), { ...draft, id: 'new-unit' }]
   writeUnits(storage, units)
   assert.equal(readUnits(storage).length, 5)
-  units = readUnits(storage).map(unit => unit.id === 'new-unit' ? { ...unit, price: 950000, status: 'Vô hiệu hóa' } : unit)
+  units = readUnits(storage).map(unit => unit.id === 'new-unit' ? { ...unit, price: 950000, status: 'Deactivated' } : unit)
   writeUnits(storage, units)
   assert.equal(readUnits(storage).find(unit => unit.id === 'new-unit').price, 950000)
-  assert.equal(readUnits(storage).find(unit => unit.id === 'new-unit').status, 'Vô hiệu hóa')
-  units = readUnits(storage).map(unit => unit.id === 'new-unit' ? { ...unit, status: 'Còn trống' } : unit)
+  assert.equal(readUnits(storage).find(unit => unit.id === 'new-unit').status, 'Deactivated')
+  units = readUnits(storage).map(unit => unit.id === 'new-unit' ? { ...unit, status: 'Available' } : unit)
   writeUnits(storage, units)
-  assert.equal(readUnits(storage).find(unit => unit.id === 'new-unit').status, 'Còn trống')
+  assert.equal(readUnits(storage).find(unit => unit.id === 'new-unit').status, 'Available')
 })
 test('Corrupt data is reported without overwriting existing storage', () => {
   const { values, storage } = setup()

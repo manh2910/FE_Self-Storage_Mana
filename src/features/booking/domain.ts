@@ -10,6 +10,8 @@ export interface Booking extends BookingInput {
 }
 export interface BookableUnit { id: string; monthlyPrice: number; available: boolean }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }
+export const rentalDurations = [1, 3, 6, 12, 24] as const
+export const isRentalDuration = (months: number): boolean => rentalDurations.some(value => value === months)
 export function localToday(now = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
@@ -19,13 +21,13 @@ export function isDate(value: string): boolean {
   return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === value
 }
 export function addMonths(value: string, months: number): string {
-  if (!isDate(value) || !Number.isInteger(months) || months < 1 || months > 12) throw new Error('Invalid rental period.')
+  if (!isDate(value) || !Number.isInteger(months) || months < 1 || months > 24) throw new Error('Invalid rental period.')
   const [year, month, day] = value.split('-').map(Number)
   const lastDay = new Date(Date.UTC(year, month - 1 + months + 1, 0)).getUTCDate()
   return new Date(Date.UTC(year, month - 1 + months, Math.min(day, lastDay))).toISOString().slice(0, 10)
 }
 export function quote(monthlyPrice: number, months: number) {
-  if (!Number.isSafeInteger(monthlyPrice) || monthlyPrice <= 0 || !Number.isInteger(months) || months < 1 || months > 12) throw new Error('Invalid price or rental duration.')
+  if (!Number.isSafeInteger(monthlyPrice) || monthlyPrice <= 0 || !Number.isInteger(months) || months < 1 || months > 24) throw new Error('Invalid price or rental duration.')
   const rentalTotal = monthlyPrice * months
   const deposit = monthlyPrice
   if (!Number.isSafeInteger(rentalTotal + deposit)) throw new Error('The cost exceeds the supported limit.')
@@ -37,7 +39,7 @@ export function overlaps(start: string, end: string, otherStart: string, otherEn
 export function validateInput(input: BookingInput, today = localToday()) {
   const errors: Record<string, string> = {}
   if (!isDate(input.startDate) || input.startDate < today) errors.startDate = 'Choose a start date on or after today.'
-  if (!Number.isInteger(input.months) || input.months < 1 || input.months > 12) errors.months = 'Choose a rental duration between 1 and 12 months.'
+  if (!Number.isInteger(input.months) || input.months < 1 || input.months > 24) errors.months = 'Choose a rental duration between 1 and 24 months.'
   if (input.fullName.trim().length < 2 || input.fullName.trim().length > 100) errors.fullName = 'Full name must contain 2 to 100 characters.'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) || input.email.length > 254) errors.email = 'Enter a valid email address.'
   if (!/^\+?[\d\s().-]{8,20}$/.test(input.phone.trim()) || input.phone.replace(/\D/g, '').length < 8) errors.phone = 'Enter a valid phone number (8–15 digits).'
@@ -59,7 +61,7 @@ function isBooking(value: unknown, userId: number): value is Booking {
   if (!value || typeof value !== 'object') return false
   const b = value as Booking
   const valid = b.userId === userId && typeof b.id === 'string' && typeof b.requestId === 'string' && typeof b.unitId === 'string' &&
-    isDate(b.startDate) && isDate(b.endDate) && b.endDate > b.startDate && Number.isInteger(b.months) && b.months >= 1 && b.months <= 12 &&
+    isDate(b.startDate) && isDate(b.endDate) && b.endDate > b.startDate && Number.isInteger(b.months) && b.months >= 1 && b.months <= 24 &&
     typeof b.fullName === 'string' && typeof b.email === 'string' && typeof b.phone === 'string' && typeof b.notes === 'string' &&
     Number.isSafeInteger(b.monthlyPrice) && b.monthlyPrice > 0 && Number.isSafeInteger(b.total) && b.total > 0 &&
     ['pending', 'confirmed', 'cancelled'].includes(b.status) && typeof b.createdAt === 'string' && Number.isFinite(Date.parse(b.createdAt))

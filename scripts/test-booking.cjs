@@ -10,7 +10,7 @@ const loaded = new Module(filename, module)
 loaded.filename = filename
 loaded.paths = module.paths
 loaded._compile(js, filename)
-const { addMonths, quote, overlaps, validateInput, DemoBookingStore, signatureMatches } = loaded.exports
+const { addMonths, quote, overlaps, validateInput, DemoBookingStore, signatureMatches, rentalDurations, isRentalDuration } = loaded.exports
 function setup() {
   const map = new Map()
   const adapter = { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value) }
@@ -27,8 +27,24 @@ test('Calendar months clamp month-end and account for leap years', () => {
 })
 test('Quote uses one-month deposit, with bounded integer amounts and duration', () => {
   assert.deepEqual(quote(800000, 3), { rentalTotal: 2400000, deposit: 800000, total: 3200000 })
-  for (const months of [0, 13, 1.5, NaN]) assert.throws(() => quote(800000, months))
+  for (const months of [0, 25, 1.5, NaN]) assert.throws(() => quote(800000, months))
   assert.throws(() => quote(Number.MAX_SAFE_INTEGER, 12))
+})
+
+test('All offered durations work and a 24-month booking survives storage and payment', () => {
+  assert.deepEqual(rentalDurations, [1, 3, 6, 12, 24])
+  for (const months of rentalDurations) {
+    assert.equal(isRentalDuration(months), true)
+    assert.equal(quote(800000, months).total, 800000 * (months + 1))
+  }
+  for (const months of [0, 2, 13, 25, 1.5, NaN]) assert.equal(isRentalDuration(months), false)
+  const { store, adapter } = setup()
+  const booking = store.create(0, { ...input, months: 24 }, unit, today)
+  assert.equal(booking.endDate, '2028-10-20')
+  assert.equal(booking.total, 20000000)
+  assert.equal(new DemoBookingStore(adapter).list(0)[0].months, 24)
+  assert.equal(new DemoBookingStore(adapter).pay(0, booking.id).status, 'confirmed')
+  assert.equal(validateInput({ ...input, months: 25 }, today).months !== undefined, true)
 })
 test('Validation rejects past/invalid dates, contact details and missing consent', () => {
   assert.deepEqual(validateInput(input, today), {})

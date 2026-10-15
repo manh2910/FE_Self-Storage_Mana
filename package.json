@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test:auth": "node scripts/test-auth.cjs",
     "test:booking": "node scripts/test-booking.cjs",
+    "test:space-filters": "node scripts/test-space-filters.cjs",
     "test:manager-units": "node scripts/test-manager-units.cjs",
     "test:facility-workspace": "node scripts/test-facility-workspace.cjs"
   },

@@ -5,7 +5,7 @@
 - `src/pages/Home/HomePage.tsx`: gắn ref vào `.storage-home`, gọi `useHomeMotion` và đặt `HomeScrollExperience` ở phần quy trình thuê kho.
 - `src/pages/Home/useHomeMotion.ts`: đăng ký GSAP, ScrollTrigger và useGSAP; hiệu ứng ảnh hero và chữ.
 - `src/pages/Home/HomeScrollExperience.tsx`: hai component StorageStory và StorageTour.
-- `src/pages/Home/HomeMotion.css`: sticky layout, canvas, lớp ảnh zoom, responsive và reduced motion.
+- Sticky layout, canvas, lớp ảnh zoom, responsive và reduced motion dùng class Tailwind ngay trong `HomeScrollExperience.tsx` và `HomePage.tsx`.
 - `scripts/generate-storage-sequence.cjs`: tạo 48 khung hình SVG tại `public/images/storage-sequence`.
 
 ## 1. Scroll-Driven Animation
