@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { StaffIcon } from '../components/StaffIcons'
 import { DailyScheduleTab } from '../components/DailyScheduleTab'
 import { BookingVerificationTab } from '../components/BookingVerificationTab'
@@ -250,8 +250,15 @@ export default function StaffDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition border border-white/15"
+            >
+              <span>Về Trang chủ</span>
+              <span aria-hidden="true">↗</span>
+            </Link>
             <div className="text-right hidden sm:block">
-              <span className="text-xs text-slate-400 block">Nhân viên đang đăng nhập</span>
+              <span className="text-xs text-slate-400 block">Nhân viên trực</span>
               <strong className="text-sm text-white">{staffData.shiftInfo.staffName}</strong>
             </div>
             <span className="h-8 w-8 rounded-full bg-blue-700 border border-blue-400 text-white font-bold flex items-center justify-center text-xs">
