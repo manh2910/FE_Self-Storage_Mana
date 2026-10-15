@@ -1,2 +1,19 @@
 # Local AI skills
 /.agents/skills/
+
+# Dependencies and generated output
+/node_modules/
+/dist/
+*.tsbuildinfo
+
+# Local environment (keep a shareable example)
+.env
+.env.*
+!.env.example
+
+# Logs and editor state
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

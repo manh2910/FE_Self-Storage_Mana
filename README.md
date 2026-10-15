@@ -6,11 +6,38 @@ npm i
 
 npm run dev
 
+## Cấu trúc project
+
+```text
+src/
+  app/                 # App và cấu hình route theo vai trò
+  features/            # Nhóm source theo nghiệp vụ, tên thư mục viết thường
+    auth/              # api, components, hooks, model, pages, types
+    booking/           # model và pages của luồng đặt kho
+    discovery/         # components, model và pages tra cứu kho
+    home/              # components, hooks và pages trang chủ
+    manager/           # components, model và pages quản lý cơ sở
+    admin/             # Trang quản trị
+    customer/          # Trang khách hàng
+    operations/        # Trang vận hành
+    staff/             # Trang nhân viên
+  shared/              # api, layout và styles dùng chung
+  main.tsx             # Khởi tạo React và các provider
+public/                # Asset tĩnh, giữ nguyên URL hiện tại
+tests/                 # Kiểm thử nghiệp vụ và lưu trữ
+scripts/               # Script hỗ trợ tạo asset
+docs/                  # Tài liệu kỹ thuật
+```
+
+Đặt giao diện route trong `pages`, component của nghiệp vụ trong `components`, hook trong `hooks`, logic và dữ liệu trong `model`. Phần dùng chung giữa các nghiệp vụ đặt trong `shared`; phần đăng nhập dùng chung được quản lý tại `features/auth`. Giữ các file cấu hình Vite, TypeScript và Tailwind ở root.
+
+`node_modules`, `dist`, `*.tsbuildinfo` là dữ liệu sinh tự động, không commit. Chạy `npm ci` để cài dependency, `npm test` để chạy toàn bộ test, `npm run build` để kiểm tra TypeScript và tạo bản build.
+
 ## Quy ước giao diện
 
 Dùng class Tailwind CSS trong component `.tsx` cho toàn project, bao gồm responsive, hover/focus và reduced motion. Các chuỗi class dùng lặp lại được đặt trong hằng `styles` ngay tại file component. Không tạo file CSS hoặc HTML riêng cho từng trang/component.
 
-`src/index.css` chỉ chứa ba chỉ thị Tailwind. `tailwind.config.js` chứa font, màu và keyframe dùng chung. `index.html` ở thư mục gốc là entry bắt buộc của Vite.
+`src/shared/styles/index.css` chỉ chứa ba chỉ thị Tailwind. `tailwind.config.js` chứa font, màu và keyframe dùng chung. `index.html` ở thư mục gốc là entry bắt buộc của Vite.
 
 ## Luồng đặt kho khách hàng (frontend demo)
 
@@ -36,7 +63,7 @@ Kiểm thử bao gồm tính tiền, tháng lịch/năm nhuận, dữ liệu kh�
 
 ### Khi có backend
 
-`src/features/booking/catalog.ts` chứa danh mục mẫu. `domain.ts` tách quy tắc minh họa và repository lưu trữ local khỏi giao diện trong `BookingPages.tsx`. Thay danh mục và repository bằng API theo Swagger thực tế. Backend phải kiểm tra quyền sở hữu đơn, tồn kho đồng thời, giá/chính sách chính thức, idempotency, hợp đồng và trạng thái thanh toán từ gateway. Không dùng trạng thái local hoặc nút thanh toán demo để xác nhận giao dịch thật.
+`src/features/booking/model/catalog.ts` chứa danh mục mẫu. `domain.ts` tách quy tắc minh họa và repository lưu trữ local khỏi giao diện trong `BookingPages.tsx`. Thay danh mục và repository bằng API theo Swagger thực tế. Backend phải kiểm tra quyền sở hữu đơn, tồn kho đồng thời, giá/chính sách chính thức, idempotency, hợp đồng và trạng thái thanh toán từ gateway. Không dùng trạng thái local hoặc nút thanh toán demo để xác nhận giao dịch thật.
 
 ## Facility Manager demo
 

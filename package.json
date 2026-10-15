@@ -7,11 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:auth": "node scripts/test-auth.cjs",
-    "test:booking": "node scripts/test-booking.cjs",
-    "test:space-filters": "node scripts/test-space-filters.cjs",
-    "test:manager-units": "node scripts/test-manager-units.cjs",
-    "test:facility-workspace": "node scripts/test-facility-workspace.cjs"
+    "test:auth": "node tests/test-auth.cjs",
+    "test:booking": "node tests/test-booking.cjs",
+    "test:space-filters": "node tests/test-space-filters.cjs",
+    "test:manager-units": "node tests/test-manager-units.cjs",
+    "test:facility-workspace": "node tests/test-facility-workspace.cjs",
+    "test": "node --test tests/test-*.cjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
