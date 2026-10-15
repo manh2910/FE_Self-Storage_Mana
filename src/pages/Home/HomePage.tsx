@@ -71,13 +71,6 @@ export default function HomePage() {
 
       {/* Hero Section chuẩn mẫu DriveEasy */}
       <section className="relative bg-slate-900 text-white py-16 lg:py-24 px-6 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-40">
-          <img
-            src="/public/images/messi-3110162129.jpg"
-            alt="Self Storage Background"
-            className="w-full h-full object-cover"
-          />
-        </div>
 
         <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left Text */}
