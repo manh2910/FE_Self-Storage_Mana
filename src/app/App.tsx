@@ -84,11 +84,7 @@ function App() {
       {/* Staff Portal */}
       <Route
         path="/staff/*"
-        element={
-          <ProtectedRoute allowedRoles={['FacilityStaff']}>
-            <StaffDashboard />
-          </ProtectedRoute>
-        }
+        element={<StaffDashboard />}
       />
 
       {/* Temporary FM interface preview; restore role protection with authentication. */}
