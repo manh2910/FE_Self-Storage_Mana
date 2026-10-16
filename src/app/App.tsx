@@ -106,14 +106,10 @@ function App() {
         element={<ManagerDashboard />}
       />
 
-      {/* Operations Portal */}
+      {/* Operations Portal (Business Operations Manager) */}
       <Route
         path="/operations/*"
-        element={
-          <ProtectedRoute allowedRoles={['BusinessOperationsManager']}>
-            <OperationsDashboard />
-          </ProtectedRoute>
-        }
+        element={<OperationsDashboard />}
       />
 
       {/* Admin Portal */}

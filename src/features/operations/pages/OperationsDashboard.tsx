@@ -1,40 +1,293 @@
+import { useState, useEffect } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
+import { OperationsIcon } from '../components/OperationsIcons'
+import { FacilityDirectoryTab } from '../components/FacilityDirectoryTab'
+import { RentalPoliciesTab } from '../components/RentalPoliciesTab'
+import { PricingFeesTab } from '../components/PricingFeesTab'
+import { PerformanceAnalyticsTab } from '../components/PerformanceAnalyticsTab'
+import { SystemReportsTab } from '../components/SystemReportsTab'
+import {
+  loadOperationsData,
+  saveOperationsData,
+  type OperationsState,
+  type FacilityItem,
+  type RentalPolicyConfig,
+  type PricingTier,
+  type AdditionalFee,
+  type PromotionPolicy,
+} from '../model/operationsDomain'
 
 export default function OperationsDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') || 'facilities'
+  const [activeTab, setActiveTab] = useState<string>(initialTab)
+
+  const [opsData, setOpsData] = useState<OperationsState>(() => loadOperationsData())
+
+  useEffect(() => {
+    saveOperationsData(opsData)
+  }, [opsData])
+
+  useEffect(() => {
+    const title = document.title
+    document.title = 'Quản lý Vận hành Kinh doanh (BOM) — SelfStorage'
+    return () => {
+      document.title = title
+    }
+  }, [])
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId)
+    setSearchParams({ tab: tabId })
+  }
+
+  // Facility handlers
+  const handleAddFacility = (item: Omit<FacilityItem, 'id'>) => {
+    const id = `fac-${Math.floor(100 + Math.random() * 900)}`
+    setOpsData((prev) => ({
+      ...prev,
+      facilities: [...prev.facilities, { ...item, id }],
+    }))
+  }
+
+  const handleUpdateFacility = (item: FacilityItem) => {
+    setOpsData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.map((f) => (f.id === item.id ? item : f)),
+    }))
+  }
+
+  // Policy handlers
+  const handleAddPolicy = (policy: Omit<RentalPolicyConfig, 'id' | 'lastUpdated'>) => {
+    const id = `pol-${Math.floor(100 + Math.random() * 900)}`
+    const now = new Date().toISOString().slice(0, 10)
+    setOpsData((prev) => ({
+      ...prev,
+      policies: [...prev.policies, { ...policy, id, lastUpdated: now }],
+    }))
+  }
+
+  const handleUpdatePolicy = (policy: RentalPolicyConfig) => {
+    setOpsData((prev) => ({
+      ...prev,
+      policies: prev.policies.map((p) => (p.id === policy.id ? policy : p)),
+    }))
+  }
+
+  // Pricing & Fee handlers
+  const handleUpdatePricingTier = (tier: PricingTier) => {
+    setOpsData((prev) => ({
+      ...prev,
+      pricingTiers: prev.pricingTiers.map((t) => (t.id === tier.id ? tier : t)),
+    }))
+  }
+
+  const handleAddAdditionalFee = (fee: Omit<AdditionalFee, 'id'>) => {
+    const id = `fee-${Math.floor(100 + Math.random() * 900)}`
+    setOpsData((prev) => ({
+      ...prev,
+      additionalFees: [...prev.additionalFees, { ...fee, id }],
+    }))
+  }
+
+  const handleUpdateAdditionalFee = (fee: AdditionalFee) => {
+    setOpsData((prev) => ({
+      ...prev,
+      additionalFees: prev.additionalFees.map((f) => (f.id === fee.id ? fee : f)),
+    }))
+  }
+
+  const handleAddPromotion = (promo: Omit<PromotionPolicy, 'id' | 'usageCount'>) => {
+    const id = `promo-${Math.floor(100 + Math.random() * 900)}`
+    setOpsData((prev) => ({
+      ...prev,
+      promotions: [...prev.promotions, { ...promo, id, usageCount: 0 }],
+    }))
+  }
+
+  const handleUpdatePromotion = (promo: PromotionPolicy) => {
+    setOpsData((prev) => ({
+      ...prev,
+      promotions: prev.promotions.map((p) => (p.id === promo.id ? promo : p)),
+    }))
+  }
+
+  const tabs = [
+    {
+      id: 'facilities',
+      label: 'Danh sách cơ sở',
+      icon: 'building',
+      count: opsData.facilities.length,
+    },
+    {
+      id: 'policies',
+      label: 'Chính sách cho thuê',
+      icon: 'policy',
+      count: opsData.policies.length,
+    },
+    {
+      id: 'pricing',
+      label: 'Khung giá & Biểu phí',
+      icon: 'pricing',
+      count: opsData.pricingTiers.length,
+    },
+    {
+      id: 'performance',
+      label: 'Doanh thu & Hiệu suất',
+      icon: 'analytics',
+    },
+    {
+      id: 'reports',
+      label: 'Xem & Xuất báo cáo',
+      icon: 'report',
+    },
+  ]
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-
-
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">System-wide Strategy & Policies</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage facilities, rental prices, deposit policies and revenue reports.</p>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans pb-16 antialiased">
+      {/* Top Application Bar */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-slate-900 font-extrabold text-lg tracking-tight hover:text-blue-600 transition"
+            >
+              <span className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                S
+              </span>
+              <span>
+                SelfStorage<span className="text-blue-600">.</span>
+              </span>
+            </Link>
+            <span className="text-slate-300">/</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700">Phân hệ Quản lý</span>
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                Business Operations Manager (BOM)
+              </span>
+            </div>
           </div>
-          <span className="px-3 py-1 bg-purple-50 text-purple-600 text-xs font-bold rounded-lg border border-purple-200">
-            Scope: Nationwide
-          </span>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3 text-xs border-r border-slate-200 pr-4">
+              <span className="text-slate-500">
+                Phạm vi: <strong className="text-slate-800 font-semibold">Toàn quốc (Nationwide)</strong>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-500">
+                Phụ trách: <strong className="text-slate-900 font-semibold">Lê Nguyễn Quốc Khương</strong>
+              </span>
+            </div>
+
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs"
+            >
+              <span>Về Trang chủ</span>
+              <span aria-hidden="true" className="text-slate-400">
+                ↗
+              </span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-7 space-y-6">
+        {/* Page Title & Context Header */}
+        <div className="flex flex-wrap items-end justify-between gap-4 pb-1">
+          <div>
+            <p className="text-[11px] font-bold tracking-wider text-blue-600 uppercase">
+              QUẢN LÝ VẬN HÀNH & KINH DOANH TOÀN HỆ THỐNG
+            </p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+              Bảng điều khiển Giám đốc Vận hành (BOM)
+            </h1>
+            <p className="mt-1.5 text-xs text-slate-500 max-w-2xl leading-relaxed">
+              Quản lý danh sách các cơ sở kho, thiết lập chính sách cho thuê chung, kiểm soát khung giá thuê & biểu phí, theo dõi doanh thu và xuất báo cáo toàn hệ thống.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              {opsData.facilities.length} cơ sở đang kết nối trực tuyến
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <OpsCard title="Facility directory" desc="Manage all storage facilities across SelfStorage." flow="Flow 4, 5" />
-          <OpsCard title="Rental policies" desc="Set policies for deposits, renewals, cancellations, move-out and overdue rentals." flow="Flow 4, 6" />
-          <OpsCard title="Pricing & Additional Fees" desc="Set rental prices, additional charges, overdue fees and discounts." flow="Flow 4" />
-          <OpsCard title="Revenue & Performance" desc="Monitor revenue, occupancy and performance across facilities." flow="Flow 4" />
-          <OpsCard title="System reports" desc="View and export reports by facility, unit type, revenue and agreement." flow="Flow 4" />
+        {/* Tab Navigation */}
+        <nav
+          aria-label="Operations navigation tabs"
+          className="border-b border-slate-200 flex space-x-1 sm:space-x-2 overflow-x-auto pb-px"
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 py-3 px-3.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-blue-600 text-blue-600 bg-white/50'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+                }`}
+              >
+                <OperationsIcon
+                  name={tab.icon}
+                  size={16}
+                  className={isActive ? 'text-blue-600' : 'text-slate-400'}
+                />
+                <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className="text-[11px] font-normal text-slate-400 ml-0.5">({tab.count})</span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+
+        {/* Active Tab Panel */}
+        <div className="pt-2">
+          {activeTab === 'facilities' && (
+            <FacilityDirectoryTab
+              facilities={opsData.facilities}
+              onAddFacility={handleAddFacility}
+              onUpdateFacility={handleUpdateFacility}
+            />
+          )}
+
+          {activeTab === 'policies' && (
+            <RentalPoliciesTab
+              policies={opsData.policies}
+              onAddPolicy={handleAddPolicy}
+              onUpdatePolicy={handleUpdatePolicy}
+            />
+          )}
+
+          {activeTab === 'pricing' && (
+            <PricingFeesTab
+              pricingTiers={opsData.pricingTiers}
+              additionalFees={opsData.additionalFees}
+              promotions={opsData.promotions}
+              onUpdatePricingTier={handleUpdatePricingTier}
+              onAddAdditionalFee={handleAddAdditionalFee}
+              onUpdateAdditionalFee={handleUpdateAdditionalFee}
+              onAddPromotion={handleAddPromotion}
+              onUpdatePromotion={handleUpdatePromotion}
+            />
+          )}
+
+          {activeTab === 'performance' && (
+            <PerformanceAnalyticsTab facilities={opsData.facilities} />
+          )}
+
+          {activeTab === 'reports' && (
+            <SystemReportsTab facilities={opsData.facilities} />
+          )}
         </div>
       </main>
-    </div>
-  )
-}
-
-function OpsCard({ title, desc, flow }: { title: string; desc: string; flow: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-orange-300 transition cursor-pointer group">
-      <div className="flex justify-between items-start mb-3">
-        <span className="px-2.5 py-1 bg-orange-50 text-orange-600 text-xs font-bold rounded-lg">{flow}</span>
-      </div>
-      <h3 className="font-bold text-slate-900 text-base mb-2 group-hover:text-orange-600 transition-colors">{title}</h3>
-      <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
     </div>
   )
 }
