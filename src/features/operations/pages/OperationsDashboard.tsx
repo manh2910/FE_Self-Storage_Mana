@@ -145,46 +145,50 @@ export default function OperationsDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans pb-16 antialiased">
-      {/* Top Application Bar */}
+      {/* Top Application Bar - Strictly 1 single row */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 whitespace-nowrap">
+          {/* Left Brand & Portal identity */}
+          <div className="flex items-center gap-3 shrink-0 whitespace-nowrap">
             <Link
               to="/"
-              className="flex items-center gap-2 text-slate-900 font-extrabold text-lg tracking-tight hover:text-blue-600 transition"
+              className="flex items-center gap-2 text-slate-900 font-extrabold text-lg tracking-tight hover:text-blue-600 transition shrink-0 whitespace-nowrap"
             >
-              <span className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+              <span className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-xs shrink-0">
                 S
               </span>
-              <span>
+              <span className="whitespace-nowrap">
                 SelfStorage<span className="text-blue-600">.</span>
               </span>
             </Link>
-            <span className="text-slate-300">/</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700">Phân hệ Quản lý</span>
-              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+            <span className="text-slate-300 select-none">/</span>
+            <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+              <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+                Phân hệ Quản lý
+              </span>
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 whitespace-nowrap shrink-0">
                 Business Operations Manager (BOM)
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-3 text-xs border-r border-slate-200 pr-4">
-              <span className="text-slate-500">
-                Phạm vi: <strong className="text-slate-800 font-semibold">Toàn quốc (Nationwide)</strong>
+          {/* Right Scope, User Profile & Back to Home */}
+          <div className="flex items-center gap-4 shrink-0 whitespace-nowrap">
+            <div className="hidden lg:flex items-center gap-3 text-xs border-r border-slate-200 pr-4 whitespace-nowrap shrink-0">
+              <span className="text-slate-500 whitespace-nowrap">
+                Phạm vi: <strong className="text-slate-800 font-semibold whitespace-nowrap">Toàn quốc (Nationwide)</strong>
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-500">
-                Phụ trách: <strong className="text-slate-900 font-semibold">Lê Nguyễn Quốc Khương</strong>
+              <span className="text-slate-300 select-none">•</span>
+              <span className="text-slate-500 whitespace-nowrap">
+                Phụ trách: <strong className="text-slate-900 font-semibold whitespace-nowrap">Lê Nguyễn Quốc Khương</strong>
               </span>
             </div>
 
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs whitespace-nowrap shrink-0"
             >
-              <span>Về Trang chủ</span>
+              <span className="whitespace-nowrap">Về Trang chủ</span>
               <span aria-hidden="true" className="text-slate-400">
                 ↗
               </span>
