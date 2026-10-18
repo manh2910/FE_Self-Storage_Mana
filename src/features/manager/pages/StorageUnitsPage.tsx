@@ -4,54 +4,16 @@ import { ManagerIcon } from '../components/managerNavigation'
 import { validateUnit, unitTypes, unitStatuses, type ManagedUnit, type UnitDraft } from '../model/storageUnits'
 import { loadWorkspace, saveWorkspace, updateWorkspaceUnits } from '../model/facilityWorkspace'
 
-// Shared Tailwind utilities stay beside the components that use them.
 const styles = {
-  dsButton: [
-    "inline-flex items-center justify-center min-h-11 bg-none bg-[color:var(--ds-primary)] bg-clip-border",
-    "text-[color:white] text-[length:13px] font-[650] cursor-pointer [transition:background_.2s,border-color_.2s]",
-    "px-[18px] py-[11px] gap-2.5 rounded-[9px] border border-solid border-[color:var(--ds-primary)] [&:hover]:bg-none",
-    "[&:hover]:bg-[color:#1d4ed8] [&:hover]:bg-clip-border [&:hover]:border-[color:#1d4ed8] [&.secondary]:bg-none",
-    "[&.secondary]:bg-[color:white] [&.secondary]:bg-clip-border [&.secondary]:text-[color:#1d4ed8]",
-    "[&.secondary]:border-[color:#b8c9e3] [&.secondary:hover]:bg-none [&.secondary:hover]:bg-[color:#eff6ff]",
-    "[&.secondary:hover]:bg-clip-border [&:disabled]:bg-none [&:disabled]:bg-[color:#e2e8f0] [&:disabled]:bg-clip-border",
-    "[&:disabled]:text-[color:var(--ds-muted)] [&:disabled]:cursor-not-allowed [&:disabled]:border-[color:var(--ds-line)]",
-    "[&_svg]:w-[17px] [&_svg]:h-[17px] [.ds-contact-banner_&]:shrink-0 [.ds-sticky_&]:w-full [.ds-sticky_&]:mx-0",
-    "[.ds-sticky_&]:my-2.5 [.ds-size-card_&]:w-full [.ds-calculator_&]:w-full [.ds-empty_&]:mt-4",
-    "max-[767px]:[.ds-header-actions_&]:text-[length:12px] max-[767px]:[.ds-header-actions_&]:px-3",
-    "max-[767px]:[.ds-header-actions_&]:py-[9px] max-[767px]:[.ds-filter-panel>&]:w-full",
-    "max-[480px]:[.ds-contact-banner_&]:w-full max-[720px]:[.fm-header-inner_&]:text-[length:11px]",
-    "max-[720px]:[.fm-header-inner_&]:px-3 max-[720px]:[.fm-header-inner_&]:py-2.5",
-    "max-[720px]:[.shared-header_.ds-header-actions_&]:text-[length:10px]",
-    "max-[720px]:[.shared-header_.ds-header-actions_&]:p-2.5",
-    "max-[720px]:[.shared-header_.ds-header-actions>.ds-button.secondary~&]:hidden",
-    "max-[720px]:[.shared-header_.ds-header-actions>&.secondary]:whitespace-nowrap",
-    "[.shared-header.midnight-header_&]:bg-none [.shared-header.midnight-header_&]:bg-[color:#2563eb]",
-    "[.shared-header.midnight-header_&]:bg-clip-border [.shared-header.midnight-header_&]:text-[color:#fff]",
-    "[.shared-header.midnight-header_&]:[transition:background_.2s_ease,border-color_.2s_ease,box-shadow_.2s_ease]",
-    "[.shared-header.midnight-header_&]:border-[color:#3b82f6] [.shared-header.midnight-header_&:hover]:bg-none",
-    "[.shared-header.midnight-header_&:hover]:bg-[color:#1d4ed8] [.shared-header.midnight-header_&:hover]:bg-clip-border",
-    "[.shared-header.midnight-header_&:hover]:[box-shadow:0_0_18px_#2563eb30]",
-    "[.shared-header.midnight-header_&.secondary]:bg-none",
-    "[.shared-header.midnight-header_&.secondary]:bg-[color:#ffffff55]",
-    "[.shared-header.midnight-header_&.secondary]:bg-clip-border",
-    "[.shared-header.midnight-header_&.secondary]:text-[color:#172a46]",
-    "[.shared-header.midnight-header_&.secondary]:border-[color:#8194ad70]",
-    "[.shared-header.midnight-header_&.secondary:hover]:bg-none",
-    "[.shared-header.midnight-header_&.secondary:hover]:bg-[color:#ffffff99]",
-    "[.shared-header.midnight-header_&.secondary:hover]:bg-clip-border",
-    "[.shared-header.midnight-header_&.secondary:hover]:text-[color:#1e40af]",
-    "[.shared-header.midnight-header_&.secondary:hover]:border-[color:#2563eb]",
-    "[.shared-header.booking-navigation_&.booking-nav-cta]:bg-[image:linear-gradient(115deg,#2563eb,#1d4ed8)]",
-    "[.shared-header.booking-navigation_&.booking-nav-cta]:bg-[color:transparent]",
-    "[.shared-header.booking-navigation_&.booking-nav-cta]:bg-clip-border",
-    "[.shared-header.booking-navigation_&.booking-nav-cta]:[box-shadow:0_4px_14px_#2563eb20]",
-    "[.shared-header.booking-navigation_&.booking-nav-cta]:border-[color:#3b82f6]",
-    "max-[520px]:[.fm-units-heading_&]:w-full max-[520px]:[.fm-dialog-actions_&]:flex-1",
-  ].join(' '),
-  fmFormAlert: [
-    "bg-none bg-[color:#fef2f2] bg-clip-border text-[color:#991b1b] text-[length:12px] mt-0 mb-[18px] px-4 py-3 mx-0",
-    "rounded-[8px] border border-solid border-[color:#fecaca] [&_a]:block [&_a]:underline [&_a]:mt-[5px]",
-  ].join(' '),
+  dsButton:
+    'inline-flex min-h-11 cursor-pointer items-center justify-center gap-2.5 rounded-lg border border-blue-600 bg-blue-600 px-[18px] py-[11px] text-[13px] font-semibold text-white transition ' +
+    'hover:border-blue-700 hover:bg-blue-700 ' +
+    '[&.secondary]:border-slate-300 [&.secondary]:bg-white [&.secondary]:text-blue-700 [&.secondary:hover]:bg-blue-50 ' +
+    'disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-200 disabled:text-slate-500 ' +
+    '[&_svg]:h-[17px] [&_svg]:w-[17px] max-[520px]:[.fm-dialog-actions_&]:flex-1 max-[520px]:[.fm-units-heading_&]:w-full',
+
+  fmFormAlert:
+    'mx-0 mb-[18px] mt-0 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800 [&_a]:mt-1 [&_a]:block [&_a]:underline',
 } as const
 
 
@@ -117,7 +79,20 @@ export default function StorageUnitsPage() {
     </section><p className="fm-unit-footnote text-[length:11px] text-[color:var(--fm-muted)] mt-5">Demo data is saved in this browser and is not synced with the booking system.</p>
     {editor && <dialog className="fm-unit-dialog fixed top-0 right-0 bottom-0 left-0 bg-none bg-[color:white] bg-clip-border text-[color:var(--fm-ink)] w-[min(600px,calc(100%_-_32px))] max-h-[calc(100dvh_-_40px)] overflow-y-auto [box-shadow:0_25px_80px_#14263d30] p-7 m-auto rounded-[18px] border border-solid border-[color:var(--fm-border)] [&::backdrop]:bg-none [&::backdrop]:bg-[color:#0f172a80] [&::backdrop]:bg-clip-border [&::backdrop]:[backdrop-filter:blur(3px)] max-[520px]:p-[22px]" ref={dialog} onCancel={() => setEditor(null)} onClose={() => setEditor(null)} aria-labelledby="unit-dialog-title"><div className="fm-dialog-heading flex [align-items:start] justify-between gap-4 [&_h2]:text-[length:25px] [&_h2]:mb-4 max-[520px]:[&_h2]:text-[length:22px]"><div><span className="fm-eyebrow text-[length:10px] font-[750] tracking-[1.8px] text-[color:var(--fm-blue)]">STORAGE UNIT</span><h2 id="unit-dialog-title">{editor.kind === 'add' ? 'Add new unit' : editor.kind === 'edit' ? `Edit unit ${editor.unit.code}` : 'Deactivate unit'}</h2></div><button className="fm-dialog-close w-10 h-10 shrink-0 bg-none bg-[color:#f8fafc] bg-clip-border text-[color:var(--fm-muted)] text-[length:26px] cursor-pointer rounded-[8px] border border-solid border-[color:var(--fm-border)] [&:hover]:bg-none [&:hover]:bg-[color:#e2e8f0] [&:hover]:bg-clip-border" type="button" onClick={() => dialog.current?.close()} aria-label="Close form">×</button></div>
     {saveError && <p className={`fm-form-alert ${styles.fmFormAlert}`} role="alert">{saveError}</p>}
-    {editor.kind === 'disable' ? <div className="fm-disable-confirm [&_p]:text-[length:13px] [&_p]:text-[color:var(--fm-muted)] [&_p]:leading-[1.9] [&_p]:mb-3"><p>Deactivate unit <strong>{editor.unit.code}</strong>? The unit will remain listed as Deactivated.</p><p>You can reactivate it by editing the unit status.</p><div className="fm-dialog-actions flex items-center justify-end mt-[26px] pt-5 [border-top-width:1px] [border-top-style:solid] [border-top-color:var(--fm-border)] gap-3"><button className={`ds-button secondary ${styles.dsButton}`} onClick={() => dialog.current?.close()}>Cancel</button><button className="ds-button fm-danger inline-flex items-center justify-center min-h-11 bg-none bg-[color:var(--ds-primary)] bg-clip-border text-[color:white] text-[length:13px] font-[650] cursor-pointer [transition:background_.2s,border-color_.2s] px-[18px] py-[11px] gap-2.5 rounded-[9px] border border-solid border-[color:var(--ds-primary)] [&:hover]:bg-none [&:hover]:bg-[color:#1d4ed8] [&:hover]:bg-clip-border [&:hover]:border-[color:#1d4ed8] [&.secondary]:bg-none [&.secondary]:bg-[color:white] [&.secondary]:bg-clip-border [&.secondary]:text-[color:#1d4ed8] [&.secondary]:border-[color:#b8c9e3] [&.secondary:hover]:bg-none [&.secondary:hover]:bg-[color:#eff6ff] [&.secondary:hover]:bg-clip-border [&:disabled]:bg-none [&:disabled]:bg-[color:#e2e8f0] [&:disabled]:bg-clip-border [&:disabled]:text-[color:var(--ds-muted)] [&:disabled]:cursor-not-allowed [&:disabled]:border-[color:var(--ds-line)] [&_svg]:w-[17px] [&_svg]:h-[17px] [.ds-contact-banner_&]:shrink-0 [.ds-sticky_&]:w-full [.ds-sticky_&]:mx-0 [.ds-sticky_&]:my-2.5 [.ds-size-card_&]:w-full [.ds-calculator_&]:w-full [.ds-empty_&]:mt-4 max-[767px]:[.ds-header-actions_&]:text-[length:12px] max-[767px]:[.ds-header-actions_&]:px-3 max-[767px]:[.ds-header-actions_&]:py-[9px] max-[767px]:[.ds-filter-panel>&]:w-full max-[480px]:[.ds-contact-banner_&]:w-full max-[720px]:[.fm-header-inner_&]:text-[length:11px] max-[720px]:[.fm-header-inner_&]:px-3 max-[720px]:[.fm-header-inner_&]:py-2.5 max-[720px]:[.shared-header_.ds-header-actions_&]:text-[length:10px] max-[720px]:[.shared-header_.ds-header-actions_&]:p-2.5 max-[720px]:[.shared-header_.ds-header-actions>.ds-button.secondary~&]:hidden max-[720px]:[.shared-header_.ds-header-actions>&.secondary]:whitespace-nowrap [.shared-header.midnight-header_&]:bg-none [.shared-header.midnight-header_&]:bg-[color:#2563eb] [.shared-header.midnight-header_&]:bg-clip-border [.shared-header.midnight-header_&]:text-[color:#fff] [.shared-header.midnight-header_&]:[transition:background_.2s_ease,border-color_.2s_ease,box-shadow_.2s_ease] [.shared-header.midnight-header_&]:border-[color:#3b82f6] [.shared-header.midnight-header_&:hover]:bg-none [.shared-header.midnight-header_&:hover]:bg-[color:#1d4ed8] [.shared-header.midnight-header_&:hover]:bg-clip-border [.shared-header.midnight-header_&:hover]:[box-shadow:0_0_18px_#2563eb30] [.shared-header.midnight-header_&.secondary]:bg-none [.shared-header.midnight-header_&.secondary]:bg-[color:#ffffff55] [.shared-header.midnight-header_&.secondary]:bg-clip-border [.shared-header.midnight-header_&.secondary]:text-[color:#172a46] [.shared-header.midnight-header_&.secondary]:border-[color:#8194ad70] [.shared-header.midnight-header_&.secondary:hover]:bg-none [.shared-header.midnight-header_&.secondary:hover]:bg-[color:#ffffff99] [.shared-header.midnight-header_&.secondary:hover]:bg-clip-border [.shared-header.midnight-header_&.secondary:hover]:text-[color:#1e40af] [.shared-header.midnight-header_&.secondary:hover]:border-[color:#2563eb] [.shared-header.booking-navigation_&.booking-nav-cta]:bg-[image:linear-gradient(115deg,#2563eb,#1d4ed8)] [.shared-header.booking-navigation_&.booking-nav-cta]:bg-[color:transparent] [.shared-header.booking-navigation_&.booking-nav-cta]:bg-clip-border [.shared-header.booking-navigation_&.booking-nav-cta]:[box-shadow:0_4px_14px_#2563eb20] [.shared-header.booking-navigation_&.booking-nav-cta]:border-[color:#3b82f6] [&.ds-button]:bg-none [&.ds-button]:bg-[color:#b91c1c] [&.ds-button]:bg-clip-border [&.ds-button]:border-[color:#b91c1c] [&.ds-button:hover]:bg-none [&.ds-button:hover]:bg-[color:#991b1b] [&.ds-button:hover]:bg-clip-border [&.ds-button:hover]:border-[color:#991b1b] max-[520px]:[.fm-units-heading_&]:w-full max-[520px]:[.fm-dialog-actions_&]:flex-1" onClick={() => persist(units.map(unit => unit.id === editor.unit.id ? { ...unit, status: 'Deactivated' } : unit), `Deactivate unit ${editor.unit.code}.`)}>Deactivated</button></div></div> : <form noValidate onSubmit={submit}>
+    {editor.kind === 'disable' ? <div className="fm-disable-confirm [&_p]:text-[length:13px] [&_p]:text-[color:var(--fm-muted)] [&_p]:leading-[1.9] [&_p]:mb-3"><p>Deactivate unit <strong>{editor.unit.code}</strong>? The unit will remain listed as Deactivated.</p><p>You can reactivate it by editing the unit status.</p><div className="fm-dialog-actions flex items-center justify-end mt-[26px] pt-5 [border-top-width:1px] [border-top-style:solid] [border-top-color:var(--fm-border)] gap-3"><button className={`ds-button secondary ${styles.dsButton}`} onClick={() => dialog.current?.close()}>Cancel</button><button
+  type="button"
+  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-red-700 bg-red-700 px-[18px] py-[11px] text-[13px] font-semibold text-white transition hover:border-red-800 hover:bg-red-800 disabled:opacity-55 max-[520px]:flex-1"
+  onClick={() =>
+    persist(
+      units.map((unit) =>
+        unit.id === editor.unit.id ? { ...unit, status: 'Deactivated' } : unit,
+      ),
+      `Deactivate unit ${editor.unit.code}.`,
+    )
+  }
+>
+  Confirm deactivation
+</button></div></div> : <form noValidate onSubmit={submit}>
       {Object.values(errors).some(Boolean) && <div className={`fm-form-alert ${styles.fmFormAlert}`} role="alert" tabIndex={-1} ref={errorSummary}><strong>Review unit information</strong>{Object.entries(errors).filter(([, message]) => message).map(([field, message]) => <a key={field} href={`#unit-${field}`} onClick={event => { event.preventDefault(); document.getElementById(`unit-${field}`)?.focus() }}>{fieldNames[field as keyof UnitDraft]}: {message}</a>)}</div>}
       <p className="fm-form-hint text-[length:12px] text-[color:var(--fm-muted)] mt-0 mb-[22px] mx-0">Complete the fields below. Rental prices are monthly.</p><div className="fm-form-grid [&_label]:text-[length:12px] [&_label]:font-[650] [&_label]:text-[color:var(--fm-ink)] grid grid-cols-[1fr_1fr] gap-[18px] max-[520px]:grid-cols-[1fr]">
       <label htmlFor="unit-code">Unit code<input id="unit-code" autoFocus required maxLength={30} placeholder="Example: A-103" value={draft.code} onChange={event => change('code', event.target.value)} {...invalid('code')} />{fieldError('code')}</label>
