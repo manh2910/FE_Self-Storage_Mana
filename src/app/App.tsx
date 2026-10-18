@@ -86,6 +86,13 @@ function App() {
         />
 
 
+
+      {/* Operations Portal (Business Operations Manager) */}
+      <Route
+        path="/operations/*"
+        element={<OperationsDashboard />}
+      />
+
         <Route path="/manager/payments" element={<FacilityWorkspacePage mode="payments" />} />
         <Route path="/manager/support" element={<FacilityWorkspacePage mode="support" />} />
         <Route path="/manager/units" element={<StorageUnitsPage />} />
@@ -95,6 +102,7 @@ function App() {
         <Route path="/manager/staff" element={<FacilityWorkspacePage mode="staff" />} />
         <Route path="/manager/reports" element={<FacilityWorkspacePage mode="reports" />} />
         <Route path="/manager/*" element={<ManagerDashboard />} />
+
 
         <Route
           path="/operations/*"
