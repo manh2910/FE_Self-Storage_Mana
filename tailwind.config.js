@@ -23,8 +23,13 @@ export default {
           500: '#3b82f6',
           600: '#2563eb',
           700: '#1d4ed8',
-        }
-      }
+        },
+      },
+      boxShadow: {
+        soft: '0 4px 14px rgba(15, 23, 42, 0.03)',
+        card: '0 4px 14px rgba(15, 23, 42, 0.04)',
+        cardHover: '0 10px 30px rgba(15, 23, 42, 0.12)',
+      },
     },
   },
   plugins: [],
