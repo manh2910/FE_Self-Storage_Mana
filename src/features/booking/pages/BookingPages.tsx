@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import type { User } from '../../auth/types/auth'
-import { DemoBookingStore, addMonths, isDate, isRentalDuration, rentalDurations, localToday, signatureMatches, validateInput, type Booking, type BookingInput } from '../model/domain'
-import { money, sizeLabels, storageUnits, type StorageUnit } from '../model/catalog'
+import { DemoBookingStore, addMonths, isRentalDuration, rentalDurations, localToday, signatureMatches, validateInput, type Booking, type BookingInput } from '../model/domain'
+import { money, sizeLabels } from '../model/catalog'
+import { createBookingInDB, fetchCustomerBookingsFromDB, cancelBookingInDB, type RealBookingResponse } from '../api/bookingApi'
+import axiosClient from '../../../shared/api/axiosClient'
 
 const styles = {
   error: 'rounded-lg border border-red-200 bg-red-50 p-4 text-xs text-red-800 [&_ul]:mt-2 [&_ul]:list-disc [&_ul]:pl-5',
@@ -27,8 +29,15 @@ const styles = {
   input: 'min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-normal text-slate-900 aria-[invalid=true]:border-red-600',
 } as const
 
-const labels = { pending: 'Awaiting preview payment', confirmed: 'Confirmed preview', cancelled: 'Cancelled preview' } as const
-const formatDate = (date: string) => date.split('-').reverse().join('/')
+const labels = { pending: 'Awaiting payment', confirmed: 'Confirmed', cancelled: 'Cancelled' } as const
+
+// Hàm format ngày định dạng dd/mm/yyyy an toàn với mọi loại dữ liệu (ISO string, yyyy-mm-dd)
+const formatDate = (dateString?: string) => {
+  if (!dateString) return ''
+  const cleanDate = dateString.split('T')[0]
+  return cleanDate.split('-').reverse().join('/')
+}
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : 'Unable to process your request. Please try again.')
 const guestUser: User = { userId: 0, fullName: '', email: '', phoneNumber: '', role: 'StorageCustomer', status: 'Guest' }
 
@@ -38,7 +47,9 @@ function store() {
     setItem: (k, v) => window.localStorage.setItem(`selfstorage:guest:${k}`, v),
   })
 }
+
 function notify() { window.dispatchEvent(new Event('demo-bookings-changed')) }
+
 function statusClass(s: Booking['status']) {
   return s === 'confirmed' ? styles.statusConfirmed : s === 'cancelled' ? styles.statusCancelled : ''
 }
@@ -63,12 +74,7 @@ export function useBookings() {
 }
 
 export function DemoNotice() {
-  return (
-    <div role="note" className="mb-6 flex flex-col gap-1 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 sm:flex-row sm:items-center sm:gap-3">
-      <strong className="text-[10px] tracking-wider">PREVIEW MODE</strong>
-      <span>Units, prices and terms are sample data. Bookings are saved only on this browser; no real reservations or payments are made.</span>
-    </div>
-  )
+  return null
 }
 
 function Shell({ children, publicPage = false }: { children: ReactNode; publicPage?: boolean }) {
@@ -77,7 +83,7 @@ function Shell({ children, publicPage = false }: { children: ReactNode; publicPa
   return (
     <div className={`font-sans text-sm leading-relaxed text-slate-900 [&_a]:no-underline [&_button]:cursor-pointer [&_img]:block [&_img]:object-cover ${isPublic ? 'min-h-screen bg-slate-50' : ''}`}>
       <div className={`mx-auto w-full ${isPublic ? 'max-w-[1200px] px-5 py-6 sm:px-6 sm:pb-16 sm:pt-8' : ''}`}>
-        <DemoNotice />{children}
+        {children}
       </div>
     </div>
   )
@@ -93,27 +99,40 @@ function ErrorNotice({ message, retry }: { message: string; retry?: () => void }
 }
 
 function Loading() {
-  return <p role="status" className="p-10 text-center text-slate-500">Loading bookings…</p>
+  return <p role="status" className="p-10 text-center text-slate-500">Đang tải dữ liệu…</p>
 }
 
-function UnitCard({ unit, query }: { unit: StorageUnit; query: string }) {
+function UnitCard({ unit, query }: { unit: any; query: string }) {
+  const targetId = unit.id || unit.unitId || unit.code
+
   return (
     <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-      <Link to={`/storage/${unit.id}${query}`} className="relative block h-[210px] overflow-hidden max-[680px]:h-[220px]">
+      <Link to={`/customer/book/${targetId}${query}`} className="relative block h-[210px] overflow-hidden max-[680px]:h-[220px]">
         <img src={unit.image} alt={unit.name} loading="lazy" className="h-full w-full transition duration-300 hover:scale-[1.035] motion-reduce:hover:scale-100" />
         <span className={`absolute left-3.5 top-3.5 rounded bg-white px-2.5 py-1 text-[10px] font-semibold ${unit.available ? 'text-emerald-700' : 'text-slate-600'}`}>
-          {unit.available ? 'Available in preview' : 'Unavailable in preview'}
+          {unit.available ? 'Available' : 'Occupied'}
         </span>
       </Link>
       <div className="p-5">
         <span className={styles.kicker}>{unit.facility}</span>
         <h2 className="my-1.5 text-lg font-semibold">{unit.name}</h2>
         <p className="text-xs text-slate-500">{unit.address}</p>
-        <div className={styles.tags}><span>{unit.area} m²</span><span>{unit.type === 'cold' ? 'Cold storage' : 'Standard storage'}</span></div>
+        <div className={styles.tags}>
+          <span>{unit.area} m²</span>
+          <span>{unit.type === 'cold' ? 'Cold storage' : 'Standard storage'}</span>
+        </div>
         <p className="mt-2 text-xs text-slate-500">{unit.description}</p>
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-          <div><strong className="block text-base">{money(unit.monthlyPrice)}</strong><small className="text-[10px] text-slate-500">/ month · sample price</small></div>
-          <Link className={`${styles.buttonSecondary} min-h-[42px] px-3.5 py-2.5 text-xs`} to={`/storage/${unit.id}${query}`}>Xem kho →</Link>
+          <div>
+            <strong className="block text-base">{money(unit.monthlyPrice)}</strong>
+            <small className="text-[10px] text-slate-500">/ month</small>
+          </div>
+          <Link
+            className="inline-flex min-h-[42px] items-center justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+            to={`/customer/book/${targetId}${query}`}
+          >
+            Choose unit →
+          </Link>
         </div>
       </div>
     </article>
@@ -122,14 +141,72 @@ function UnitCard({ unit, query }: { unit: StorageUnit; query: string }) {
 
 export function BrowseStoragePage() {
   const [params, setParams] = useSearchParams()
+  const [dbUnits, setDbUnits] = useState<any[]>([])
+  const [loadingDb, setLoadingDb] = useState(true)
+
   const location = params.get('location') || ''
   const size = params.get('size') || ''
   const type = params.get('type') || ''
   const startDate = params.get('startDate') || ''
   const availableOnly = params.get('available') === '1'
   const sort = params.get('sort') || ''
-  const filtered = storageUnits.filter((u) => (!location || u.location === location) && (!size || u.size === size) && (!type || u.type === type) && (!availableOnly || u.available))
-  if (sort) filtered.sort((a, b) => (sort === 'price-desc' ? b.monthlyPrice - a.monthlyPrice : a.monthlyPrice - b.monthlyPrice))
+
+  useEffect(() => {
+    async function loadUnitsFromSQL() {
+      setLoadingDb(true)
+      try {
+        const response = await axiosClient.get('/units')
+        if (response.data && Array.isArray(response.data)) {
+          setDbUnits(response.data)
+        }
+      } catch (err) {
+        console.error("Lỗi khi fetch API /units:", err)
+      } finally {
+        setLoadingDb(false)
+      }
+    }
+    loadUnitsFromSQL()
+  }, [])
+
+  const displayUnits = dbUnits.map((u) => {
+    let sizeCategory = 'medium'
+    if (u.area <= 5 || (u.code && String(u.code).startsWith('S'))) sizeCategory = 'small'
+    else if (u.area >= 20 || (u.code && String(u.code).startsWith('L'))) sizeCategory = 'large'
+
+    const facilityName = u.facilityName || u.location || ''
+    const isThuDuc = facilityName.toLowerCase().includes('thu duc') || facilityName.toLowerCase().includes('thủ đức')
+    const dynamicAddress = isThuDuc ? 'Thủ Đức, TP.HCM' : 'Quận 1, TP.HCM'
+
+    const targetId = String(u.id ?? u.unitId ?? u.code)
+
+    return {
+      id: targetId,
+      unitId: u.unitId || u.id,
+      code: u.code,
+      name: `Kho ${u.code} (${sizeCategory === 'small' ? 'Small Unit' : sizeCategory === 'medium' ? 'Medium Unit' : 'Large Unit'})`,
+      facility: facilityName || 'SelfStorage District 1',
+      address: dynamicAddress,
+      area: u.area || 10,
+      size: sizeCategory,
+      type: 'standard',
+      monthlyPrice: u.price || 1400000,
+      available: u.status === 'Available',
+      image: '/images/storage-hero.webp',
+      description: `Không gian lưu trữ tiện lợi, an toàn và bảo mật tại ${facilityName || 'chi nhánh'}.`
+    }
+  })
+
+  const filtered = displayUnits.filter((u) => 
+    (!location || u.facility.toLowerCase().includes(location.toLowerCase())) && 
+    (!size || u.size === size) && 
+    (!type || u.type === type) && 
+    (!availableOnly || u.available)
+  )
+
+  if (sort) {
+    filtered.sort((a, b) => (sort === 'price-desc' ? b.monthlyPrice - a.monthlyPrice : a.monthlyPrice - b.monthlyPrice))
+  }
+
   function change(key: string, value: string) {
     const next = new URLSearchParams(params)
     if (value) next.set(key, value); else next.delete(key)
@@ -140,25 +217,36 @@ export function BrowseStoragePage() {
   return (
     <Shell publicPage>
       <div className={styles.heading}>
-        <span className={styles.kicker}>SPACE FOR YOUR NEXT CHAPTER</span>
-        <h1 className="text-3xl font-bold tracking-tight max-[680px]:text-2xl">Find your storage</h1>
-        <p>Choose a location, size and start date to explore preview units.</p>
+        <span className={styles.kicker}>CHỌN KHO LƯU TRỮ</span>
+        <h1 className="text-3xl font-bold tracking-tight">Choose your storage unit</h1>
+        <p>Danh sách các ô kho hiện có sẵn sàng phục vụ nhu cầu của bạn.</p>
       </div>
+
       <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-4 sm:p-5 [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-xs [&_label]:font-semibold">
         <label>Location<select value={location} onChange={(e) => change('location', e.target.value)} className={styles.input}><option value="">All locations</option><option value="district-1">District 1</option><option value="thu-duc">Thu Duc</option></select></label>
         <label>Size<select value={size} onChange={(e) => change('size', e.target.value)} className={styles.input}><option value="">All sizes</option><option value="small">Small · 5 m²</option><option value="medium">Medium · 10 m²</option><option value="large">Large · 20 m²</option></select></label>
         <label>Unit type<select value={type} onChange={(e) => change('type', e.target.value)} className={styles.input}><option value="">All unit types</option><option value="standard">Standard</option><option value="cold">Cold storage</option></select></label>
         <label>Start date<input type="date" value={startDate} min={localToday()} onChange={(e) => change('startDate', e.target.value)} onInput={(e) => change('startDate', e.currentTarget.value)} className={styles.input} /></label>
       </div>
+
       <div className="flex flex-wrap items-center justify-between gap-4 py-5 text-xs text-slate-600">
-        <span role="status">{filtered.length} matching preview units</span>
-        <label className={styles.checkbox}><input type="checkbox" checked={availableOnly} onChange={(e) => change('available', e.target.checked ? '1' : '')} />Available preview units only</label>
+        <span role="status">{loadingDb ? 'Đang tải dữ liệu...' : `${filtered.length} matching units`}</span>
+        <label className={styles.checkbox}><input type="checkbox" checked={availableOnly} onChange={(e) => change('available', e.target.checked ? '1' : '')} />Available units only</label>
         <label className="flex items-center gap-2.5">Sort<select className={`${styles.input} w-[150px]`} value={sort} onChange={(e) => change('sort', e.target.value)}><option value="">Recommended</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label>
       </div>
-      {filtered.length ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((u) => <UnitCard key={u.id} unit={u} query={query} />)}</div>
+
+      {loadingDb ? (
+        <Loading />
+      ) : filtered.length ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((u: any) => <UnitCard key={u.id} unit={u} query={query} />)}
+        </div>
       ) : (
-        <div className={styles.empty}><h2 className="text-lg font-semibold">No units match your filters</h2><p>Try a different location, size or unit type.</p><button type="button" className={styles.buttonSecondary} onClick={() => setParams({})}>Clear filters</button></div>
+        <div className={styles.empty}>
+          <h2 className="text-lg font-semibold">Không tìm thấy ô kho nào</h2>
+          <p>Hãy thử thay đổi bộ lọc tìm kiếm.</p>
+          <button type="button" className={styles.buttonSecondary} onClick={() => setParams({})}>Clear filters</button>
+        </div>
       )}
     </Shell>
   )
@@ -167,32 +255,120 @@ export function BrowseStoragePage() {
 export function StorageDetailsPage() {
   const { unitId } = useParams()
   const [params] = useSearchParams()
-  const unit = storageUnits.find((u) => u.id === unitId)
-  if (!unit) return <Shell publicPage><div className={styles.empty}><h1 className="text-2xl font-bold">Unit not found</h1><Link className={styles.button} to="/storage">Back to units</Link></div></Shell>
+  const [unit, setUnit] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadUnitDetail() {
+      setLoading(true)
+      try {
+        const response = await axiosClient.get('/units')
+        if (response.data && Array.isArray(response.data)) {
+          const searchParam = String(unitId || '').toLowerCase().trim()
+          
+          const found = response.data.find((u: any) => {
+            const uId = String(u.id ?? '').toLowerCase().trim()
+            const uUnitId = String(u.unitId ?? '').toLowerCase().trim()
+            const uCode = String(u.code ?? '').toLowerCase().trim()
+
+            return uId === searchParam || uUnitId === searchParam || uCode === searchParam
+          })
+
+          if (found) {
+            let sizeCategory = 'medium'
+            if (found.area <= 5 || (found.code && String(found.code).startsWith('S'))) sizeCategory = 'small'
+            else if (found.area >= 20 || (found.code && String(found.code).startsWith('L'))) sizeCategory = 'large'
+
+            const facilityName = found.facilityName || found.location || ''
+            const isThuDuc = facilityName.toLowerCase().includes('thu duc') || facilityName.toLowerCase().includes('thủ đức')
+            const dynamicAddress = isThuDuc ? 'Thủ Đức, TP.HCM' : 'Quận 1, TP.HCM'
+
+            setUnit({
+              id: String(found.id ?? found.unitId ?? found.code),
+              name: `Kho ${found.code} (${found.type || 'Storage Unit'})`,
+              facility: facilityName || 'SelfStorage District 1',
+              address: dynamicAddress,
+              area: found.area || 10,
+              size: sizeCategory,
+              type: 'standard',
+              monthlyPrice: found.price || 1400000,
+              available: found.status === 'Available',
+              image: '/images/storage-hero.webp',
+              description: `Không gian lưu trữ tiện lợi, an toàn và bảo mật tại ${facilityName || 'chi nhánh'}.`
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải chi tiết kho:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (unitId) {
+      loadUnitDetail()
+    }
+  }, [unitId])
+
+  if (loading) {
+    return (
+      <Shell publicPage>
+        <p className="p-10 text-center text-slate-500">Đang tải dữ liệu…</p>
+      </Shell>
+    )
+  }
+
+  if (!unit) {
+    return (
+      <Shell publicPage>
+        <div className={styles.empty}>
+          <h1 className="text-2xl font-bold">Unit not found</h1>
+          <p className="mt-2 text-sm text-slate-500">Ô kho này không tồn tại trong hệ thống.</p>
+          <Link className={`${styles.button} mt-4`} to="/customer">
+            Back to units
+          </Link>
+        </div>
+      </Shell>
+    )
+  }
+
   const query = params.get('startDate') ? `?startDate=${encodeURIComponent(params.get('startDate')!)}` : ''
 
   return (
     <Shell publicPage>
-      <Link className={styles.back} to={`/storage${query}`}>← All units</Link>
+      <Link className={styles.back} to={`/customer${query}`}>
+        ← All units
+      </Link>
       <div className="mb-8 mt-2 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
         <img className="h-[280px] w-full rounded-2xl object-cover sm:h-[390px] lg:h-[445px]" src={unit.image} alt={unit.name} />
         <div>
           <span className={styles.kicker}>{unit.facility}</span>
           <h1 className="my-3 text-3xl font-bold tracking-tight max-[680px]:text-2xl">{unit.name}</h1>
           <p className="text-sm text-slate-500">{unit.address}</p>
-          <div className={styles.tags}><span>{unit.area} m²</span><span>{sizeLabels[unit.size]}</span><span>{unit.type === 'cold' ? 'Cold storage' : 'Standard'}</span></div>
+          <div className={styles.tags}>
+            <span>{unit.area} m²</span>
+            <span>{sizeLabels[unit.size as keyof typeof sizeLabels] || 'Medium'}</span>
+            <span>{unit.type === 'cold' ? 'Cold storage' : 'Standard'}</span>
+          </div>
           <p className="mt-3 text-sm text-slate-500">{unit.description}</p>
-          <div className="my-5 border-y border-slate-200 py-4"><strong className="text-2xl tracking-tight">{money(unit.monthlyPrice)}</strong><span className="ml-2 text-xs text-slate-500">/ month · preview price</span></div>
+          <div className="my-5 border-y border-slate-200 py-4">
+            <strong className="text-2xl tracking-tight">{money(unit.monthlyPrice)}</strong>
+            <span className="ml-2 text-xs text-slate-500">/ month</span>
+          </div>
           <ul className="my-5 list-disc space-y-1 pl-4 text-sm leading-relaxed text-slate-500">
-            <li>Preview rental periods: 1, 3, 6, 12 or 24 months.</li>
-            <li>Sample deposit: one month of rent.</li>
-            <li>Actual prices and terms require confirmation from the facility.</li>
+            <li>Thời hạn thuê linh hoạt: 1, 3, 6, 12 hoặc 24 tháng.</li>
+            <li>Tiền đặt cọc: 1 tháng tiền thuê.</li>
+            <li>Miễn phí ra vào kho trong giờ làm việc.</li>
           </ul>
-          {unit.available ? <Link className={styles.button} to={`/customer/book/${unit.id}${query}`}>Choose unit & book →</Link> : <p className="rounded-lg bg-slate-100 p-3.5 text-sm text-slate-600">This unit is unavailable in the preview catalog.</p>}
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-500">You can book without an account.</p>
+          {unit.available ? (
+            <Link className={styles.button} to={`/customer/book/${unit.id}${query}`}>
+              Choose unit & book →
+            </Link>
+          ) : (
+            <p className="rounded-lg bg-slate-100 p-3.5 text-sm text-slate-600">Ô kho này hiện không sẵn có để đặt trước.</p>
+          )}
         </div>
       </div>
-      <section className={styles.panel}><h2 className="text-lg font-semibold">Before you book</h2><p>Images and sizes are illustrative. Confirm restricted items and special storage requirements with the facility. Access instructions, handover and official contracts are not connected in this preview.</p></section>
     </Shell>
   )
 }
@@ -200,12 +376,70 @@ export function StorageDetailsPage() {
 export function BookingCheckoutPage() {
   const { unitId } = useParams()
   const user = guestUser
-  const unit = storageUnits.find((u) => u.id === unitId)
-  if (!unit || !unit.available) return <Shell><div className={styles.empty}><h1 className="text-2xl font-bold">Unit unavailable</h1><Link to="/storage" className={styles.button}>Choose another unit</Link></div></Shell>
+  const [unit, setUnit] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadUnit() {
+      setLoading(true)
+      try {
+        const response = await axiosClient.get('/units')
+        if (response.data && Array.isArray(response.data)) {
+          const searchParam = String(unitId || '').toLowerCase().trim()
+
+          const found = response.data.find((u: any) => {
+            const uId = String(u.id ?? '').toLowerCase().trim()
+            const uUnitId = String(u.unitId ?? '').toLowerCase().trim()
+            const uCode = String(u.code ?? '').toLowerCase().trim()
+
+            return uId === searchParam || uUnitId === searchParam || uCode === searchParam
+          })
+
+          if (found) {
+            const facilityName = found.facilityName || found.location || ''
+            const isThuDuc = facilityName.toLowerCase().includes('thu duc') || facilityName.toLowerCase().includes('thủ đức')
+            setUnit({
+              id: String(found.id ?? found.unitId ?? found.code),
+              name: `Kho ${found.code}`,
+              facility: facilityName || 'SelfStorage District 1',
+              address: isThuDuc ? 'Thủ Đức, TP.HCM' : 'Quận 1, TP.HCM',
+              area: found.area || 10,
+              monthlyPrice: found.price || 1400000,
+              available: found.status === 'Available',
+              image: '/images/storage-hero.webp',
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải thông tin ô kho:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (unitId) loadUnit()
+  }, [unitId])
+
+  if (loading) return <Shell><Loading /></Shell>
+
+  if (!unit || !unit.available) {
+    return (
+      <Shell>
+        <div className={styles.empty}>
+          <h1 className="text-2xl font-bold">Unit unavailable</h1>
+          <p className="mt-2 text-sm text-slate-500">Ô kho này hiện tại không khả dụng để đặt trước.</p>
+          <Link to="/customer" className={`${styles.button} mt-4`}>
+            Choose another unit
+          </Link>
+        </div>
+      </Shell>
+    )
+  }
+
   return <CheckoutForm key={`${user.userId}:${unit.id}`} user={user} unit={unit} />
 }
 
-function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
+function CheckoutForm({ user, unit }: { user: User; unit: any }) {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const key = `selfstorage:guest-draft:${unit.id}`
@@ -220,11 +454,8 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
       return { ...defaults, startDate: params.get('startDate') || (typeof saved.startDate === 'string' ? saved.startDate : defaults.startDate), months: params.has('months') ? defaults.months : isRentalDuration(saved.months!) ? saved.months! : 1, requestId: saved.requestId, fullName: typeof saved.fullName === 'string' ? saved.fullName : defaults.fullName, email: typeof saved.email === 'string' ? saved.email : defaults.email, phone: typeof saved.phone === 'string' ? saved.phone : defaults.phone, notes: typeof saved.notes === 'string' ? saved.notes : '', accepted: false }
     } catch { return defaults }
   })
-  const fromBooking = params.get('from') === 'booking'
-  const [step, setStep] = useState(() => (fromBooking && isDate(input.startDate) && input.startDate >= localToday() && isRentalDuration(input.months) ? 1 : 0))
-  const backParams = new URLSearchParams(params)
-  backParams.set('startDate', input.startDate); backParams.set('months', String(input.months)); backParams.set('unit', unit.id); backParams.delete('from')
-  const backToSpaces = `/booking?${backParams}`
+
+  const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -250,7 +481,8 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
     const all = validateInput(input)
     setErrors((prev) => { const next = { ...prev }; if (all[field]) next[field] = all[field]; else delete next[field]; return next })
   }
-  function continueStep(event: FormEvent) {
+
+  async function continueStep(event: FormEvent) {
     event.preventDefault()
     const all = validateInput(input)
     const fields = step === 0 ? ['startDate', 'months'] : step === 1 ? ['startDate', 'months', 'fullName', 'email', 'phone', 'notes'] : Object.keys(all)
@@ -261,12 +493,32 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
     if (step < 2) { setStep(step + 1); return }
     if (guard.current) return
     guard.current = true; setBusy(true); setError('')
+    
     try {
-      const booking = store().create(user.userId, { ...input, contract: { version: 'storage-preview-v1', signedName: signedName.trim(), signedAt: new Date().toISOString() } }, unit)
+      const unitTypeId = unit.area <= 5 ? 1 : unit.area >= 20 ? 3 : 2;
+      
+      const created = await createBookingInDB({
+        customerId: 1, 
+        facilityId: 1, 
+        unitTypeId: unitTypeId,
+        startDate: input.startDate,
+        rentalMonths: input.months,
+        selectedPackageIds: [1] 
+      });
+
+      if (!created) {
+        throw new Error('Không thể tạo đơn đặt kho. Vui lòng thử lại.')
+      }
+
       notify()
       try { sessionStorage.removeItem(key) } catch { /* ignore */ }
-      navigate(`/customer/bookings/${encodeURIComponent(booking.id)}`, { replace: true })
-    } catch (e) { setError(errorText(e)); guard.current = false; setBusy(false) }
+      const targetId = created.reservationId || (created as any).id || 1
+      navigate(`/customer/bookings/${encodeURIComponent(targetId)}`, { replace: true })
+    } catch (e) { 
+      setError(errorText(e)); 
+      guard.current = false; 
+      setBusy(false) 
+    }
   }
 
   const field = (key: 'fullName' | 'email' | 'phone', label: string, type = 'text') => (
@@ -276,15 +528,15 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
       {errors[key] && <small id={`error-${key}`} className="text-[11px] font-normal text-red-700">{errors[key]}</small>}
     </label>
   )
-  const stepLabels = fromBooking ? ['Choose Your Space', 'Customer Details', 'Confirm Booking'] : ['Rental duration', 'Contact details', 'Review & Confirm']
+  const stepLabels = ['Rental duration', 'Contact details', 'Review & Confirm']
 
   return (
     <Shell>
-      <Link className={styles.back} to={fromBooking ? backToSpaces : `/storage/${unit.id}`}>{fromBooking ? '← Choose your space' : '← Unit details'}</Link>
+      <Link className={styles.back} to="/customer">← Choose your space</Link>
       <div className={styles.heading}>
-        <span className={styles.kicker}>STORAGE BOOKING PREVIEW</span>
+        <span className={styles.kicker}>STORAGE BOOKING</span>
         <h1 className="text-3xl font-bold tracking-tight max-[680px]:text-2xl">More space. Less stress.</h1>
-        <p>Review your details before submitting a preview booking.</p>
+        <p>Review your details before submitting your booking request.</p>
       </div>
       <ol className="mb-8 flex list-none justify-between gap-3 p-0" aria-label="Booking progress">
         {stepLabels.map((label, i) => (
@@ -315,7 +567,7 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
             <>
               {field('fullName', 'Full name')}{field('email', 'Email', 'email')}{field('phone', 'Phone number', 'tel')}
               <label className={styles.field} htmlFor="booking-months-s1">Rental duration<select id="booking-months-s1" value={input.months} aria-invalid={!!errors.months} onChange={(e) => update('months', Number(e.target.value))} onBlur={() => validateField('months')} className={styles.input}>{rentalDurations.map((m) => <option key={m} value={m}>{m} {m === 1 ? 'month' : 'months'}</option>)}</select>{errors.months && <small className="text-xs text-red-700">{errors.months}</small>}</label>
-              <label className={styles.field} htmlFor="booking-notes">Notes (optional)<textarea id="booking-notes" value={input.notes} maxLength={500} rows={3} onChange={(e) => update('notes', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm" /><small>{input.notes.length}/500 characters. Do not enter card details or sensitive information.</small></label>
+              <label className={styles.field} htmlFor="booking-notes">Notes (optional)<textarea id="booking-notes" value={input.notes} maxLength={500} rows={3} onChange={(e) => update('notes', e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm" /><small>{input.notes.length}/500 characters. Do not enter sensitive information.</small></label>
             </>
           )}
           {step === 2 && (
@@ -328,18 +580,18 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
                 {input.notes && <div><dt>Notes</dt><dd>{input.notes}</dd></div>}
               </dl>
               <section className="my-6 rounded-xl border border-slate-300 bg-slate-50 p-4 sm:p-6" aria-labelledby="contract-title">
-                <h3 id="contract-title" className="text-base font-semibold">Preview agreement</h3>
-                <p className="my-3 text-xs leading-relaxed text-slate-600">This is a browser-only preview. No real contract, payment or access rights are created. Type your full name below to confirm you understand.</p>
+                <h3 id="contract-title" className="text-base font-semibold">Terms & Rental Agreement</h3>
+                <p className="my-3 text-xs leading-relaxed text-slate-600">Type your full name below to confirm you agree to the terms.</p>
                 <label className={styles.field} htmlFor="booking-signature">Type your full name to sign<input id="booking-signature" value={signedName} onChange={(e) => setSignedName(e.target.value)} aria-invalid={!!errors.signature} className={styles.input} />{errors.signature && <small className="text-[11px] text-red-700">{errors.signature}</small>}</label>
                 {signedName.trim() && <div className="mt-4 rounded-lg border border-blue-100 bg-white p-4"><span className="text-[11px] text-slate-500">Typed signature</span><strong className="mt-1 block break-words text-lg italic text-blue-900">{signedName.trim()}</strong></div>}
-                <label className={`${styles.checkbox} mt-4`} htmlFor="booking-accepted"><input id="booking-accepted" type="checkbox" checked={input.accepted} onChange={(e) => update('accepted', e.target.checked)} aria-invalid={!!errors.accepted} aria-describedby={errors.accepted ? 'accepted-error' : undefined} />I have read the agreement, confirm my typed signature and understand that this is a preview booking.</label>
+                <label className={`${styles.checkbox} mt-4`} htmlFor="booking-accepted"><input id="booking-accepted" type="checkbox" checked={input.accepted} onChange={(e) => update('accepted', e.target.checked)} aria-invalid={!!errors.accepted} aria-describedby={errors.accepted ? 'accepted-error' : undefined} />I have read and agree to the terms and rental agreement.</label>
                 {errors.accepted && <p id="accepted-error" className="mt-1 text-[11px] text-red-700">{errors.accepted}</p>}
               </section>
             </>
           )}
           <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
-            {step > 0 && <button disabled={busy} className={styles.buttonSecondary} type="button" onClick={() => { if (fromBooking && step === 1) { navigate(backToSpaces); return } setStep(step - 1); setErrors({}); setError('') }}>Back</button>}
-            <button className={styles.button} type="submit" disabled={busy}>{busy ? 'Saving booking…' : step === 2 ? 'Confirm preview booking' : 'Continue →'}</button>
+            {step > 0 && <button disabled={busy} className={styles.buttonSecondary} type="button" onClick={() => { setStep(step - 1); setErrors({}); setError('') }}>Back</button>}
+            <button className={styles.button} type="submit" disabled={busy}>{busy ? 'Processing booking…' : step === 2 ? 'Confirm Booking' : 'Continue →'}</button>
           </div>
         </form>
       </div>
@@ -348,40 +600,104 @@ function CheckoutForm({ user, unit }: { user: User; unit: StorageUnit }) {
 }
 
 export function CustomerBookingsPage() {
-  const { bookings, error, loading, refresh } = useBookings()
+  const [realBookings, setRealBookings] = useState<RealBookingResponse[]>([])
+  const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
-  const filtered = bookings.filter((b) => !status || b.status === status)
+
+  const loadBookings = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchCustomerBookingsFromDB(1)
+    setRealBookings(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadBookings()
+  }, [loadBookings])
+
+  const filtered = realBookings.filter((b) => !status || b.status.toLowerCase() === status.toLowerCase())
+
   return (
     <Shell>
       <div className="mb-7 mt-6 flex flex-wrap items-center justify-between gap-4">
-        <div><span className={styles.kicker}>YOUR SPACE</span><h1 className="my-2.5 text-3xl font-bold tracking-tight max-[680px]:text-2xl">My Bookings</h1><p className="text-sm text-slate-500">Track your bookings and preview payment status.</p></div>
-        <Link className={styles.button} to="/storage">Book another unit →</Link>
+        <div>
+          <span className={styles.kicker}>YOUR SPACE</span>
+          <h1 className="my-2.5 text-3xl font-bold tracking-tight max-[680px]:text-2xl">My Bookings</h1>
+          <p className="text-sm text-slate-500">Track and manage your storage bookings.</p>
+        </div>
+        <Link className={styles.button} to="/customer">Book another unit →</Link>
       </div>
-      <label className="mb-6 flex items-center gap-3 text-xs">Status<select className={`${styles.input} max-w-[250px]`} value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All bookings</option>{Object.entries(labels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-      {loading ? <Loading /> : error ? <ErrorNotice message={error} retry={refresh} /> : filtered.length ? (
-        <div className="grid gap-5">{filtered.map((b) => <BookingCard key={b.id} booking={b} />)}</div>
+
+      <label className="mb-6 flex items-center gap-3 text-xs">
+        Status
+        <select className={`${styles.input} max-w-[250px]`} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All bookings</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="checkedin">Checked In</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </label>
+
+      {loading ? (
+        <Loading />
+      ) : filtered.length ? (
+        <div className="grid gap-5">
+          {filtered.map((b) => (
+            <RealBookingCard key={b.reservationId} booking={b} onCancelled={loadBookings} />
+          ))}
+        </div>
       ) : (
-        <div className={styles.empty}><h2 className="text-lg font-semibold">{bookings.length ? 'No bookings with this status' : 'No preview bookings yet'}</h2><p>Explore preview units and create your first booking.</p><Link className={styles.button} to="/storage">Find your storage</Link></div>
+        <div className={styles.empty}>
+          <h2 className="text-lg font-semibold">No bookings found</h2>
+          <p>Explore available units and create your first booking.</p>
+          <Link className={styles.button} to="/customer">Find your storage</Link>
+        </div>
       )}
     </Shell>
   )
 }
 
-function BookingCard({ booking }: { booking: Booking }) {
-  const unit = storageUnits.find((u) => u.id === booking.unitId)
+function RealBookingCard({ booking, onCancelled }: { booking: RealBookingResponse; onCancelled: () => void }) {
+  const [cancelling, setCancelling] = useState(false)
+
+  const handleCancel = async () => {
+    if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn đặt kho này không?`)) return
+    setCancelling(true)
+    const ok = await cancelBookingInDB(booking.reservationId, 1)
+    setCancelling(false)
+    if (ok) {
+      alert('Đã hủy đơn thành công!')
+      onCancelled()
+    } else {
+      alert('Hủy đơn thất bại. Vui lòng thử lại.')
+    }
+  }
+
   return (
-    <article className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:gap-6 sm:p-5">
-      <img src={unit?.image || '/images/storage-hero.webp'} alt={unit?.name || booking.unitId} className="h-[115px] w-[95px] shrink-0 rounded-lg object-cover sm:h-[145px] sm:w-[155px]" />
+    <article className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:gap-6 sm:p-5 shadow-xs">
+      <img src="/images/storage-hero.webp" alt={booking.unitTypeName} className="h-[115px] w-[95px] shrink-0 rounded-lg object-cover sm:h-[145px] sm:w-[155px]" />
       <div className="min-w-0 flex-1">
-        <span className={`${styles.status} ${statusClass(booking.status)}`}>{labels[booking.status]}</span>
-        <h2 className="mt-2 text-base font-semibold sm:text-lg">{unit?.name || booking.unitId}</h2>
-        <p className="text-xs text-slate-500">{unit?.facility}</p>
-        <p className="text-xs text-slate-500">{formatDate(booking.startDate)} – {formatDate(booking.endDate)} · {booking.months} {booking.months === 1 ? 'month' : 'months'}</p>
-        <small className="mt-1 block max-w-[330px] break-all text-[9px] text-slate-500">Booking ID: {booking.id}</small>
+        <span className={`inline-block rounded px-2.5 py-1 text-[10px] font-medium ${booking.status === 'Cancelled' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-800'}`}>
+          {booking.status}
+        </span>
+        <h2 className="mt-2 text-base font-semibold sm:text-lg">{booking.unitTypeName} · {booking.facilityName}</h2>
+        <p className="text-xs text-slate-500">Mã kho: <strong className="text-slate-800">{booking.unitCode}</strong></p>
+        <p className="text-xs text-slate-500">Thời gian: {formatDate(booking.startDate)} – {formatDate(booking.endDate)} ({booking.rentalMonths} tháng)</p>
+        {/* Đã xóa dòng Reservation ID ở đây để giao diện sạch sẽ, thân thiện hơn */}
       </div>
-      <div className="ml-auto flex flex-col items-end gap-1 whitespace-nowrap max-[680px]:w-full max-[680px]:flex-row max-[680px]:items-center max-[680px]:justify-between max-[680px]:border-t max-[680px]:border-slate-200 max-[680px]:pt-3">
-        <div><strong className="block">{money(booking.total)}</strong><small className="text-[10px] text-slate-500 max-[680px]:hidden">Preview total</small></div>
-        <Link className={`${styles.buttonSecondary} min-h-[42px] px-3.5 py-2.5 text-xs`} to={`/customer/bookings/${encodeURIComponent(booking.id)}`}>View booking →</Link>
+
+      <div className="ml-auto flex flex-col items-end gap-2 whitespace-nowrap">
+        <strong className="block text-lg text-blue-600">{money(booking.totalAmount)}</strong>
+        {booking.status !== 'Cancelled' && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-md hover:bg-rose-100 transition"
+          >
+            {cancelling ? 'Đang hủy...' : 'Hủy đơn'}
+          </button>
+        )}
       </div>
     </article>
   )
@@ -389,168 +705,71 @@ function BookingCard({ booking }: { booking: Booking }) {
 
 export function BookingConfirmationPage() {
   const { bookingId } = useParams()
-  const { bookings, user, error: loadError, loading, refresh } = useBookings()
-  const booking = bookings.find((b) => b.id === bookingId)
-  const unit = storageUnits.find((u) => u.id === booking?.unitId)
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
-  const [paymentOpen, setPaymentOpen] = useState(false)
-  const cancelDialog = useRef<HTMLDialogElement>(null)
-  const guard = useRef(false)
-  useEffect(() => { if (cancelOpen) cancelDialog.current?.showModal() }, [cancelOpen])
+  const [booking, setBooking] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  function action(kind: 'pay' | 'cancel') {
-    if (!booking || !user || guard.current) return
-    guard.current = true; setBusy(true); setError('')
-    try {
-      if (kind === 'pay') store().pay(user.userId, booking.id); else store().cancel(user.userId, booking.id)
-      notify(); refresh(); setCancelOpen(false); setPaymentOpen(false)
-    } catch (e) { setError(errorText(e)) }
-    finally { guard.current = false; setBusy(false) }
-  }
+  useEffect(() => {
+    async function load() {
+      setLoading(true)
+      try {
+        const response = await axiosClient.get(`/bookings/${bookingId}`)
+        setBooking(response.data)
+      } catch (err) {
+        console.error('Lỗi khi tải thông tin đơn đặt kho:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (bookingId) load()
+  }, [bookingId])
 
   if (loading) return <Shell><Loading /></Shell>
-  if (loadError) return <Shell><ErrorNotice message={loadError} retry={refresh} /></Shell>
-  if (!booking || !unit) return <Shell><div className={styles.empty}><h1 className="text-2xl font-bold">Booking not found on this browser</h1><Link className={styles.button} to="/customer/units">Back to bookings</Link></div></Shell>
 
-  const kicker = booking.status === 'cancelled' ? 'PREVIEW BOOKING CANCELLED' : booking.status === 'confirmed' ? 'PREVIEW COMPLETE' : 'PREVIEW BOOKING SAVED'
-  const title = booking.status === 'confirmed' ? 'Preview booking confirmed!' : booking.status === 'cancelled' ? 'Your booking has been cancelled.' : 'Your booking has been saved.'
+  if (!booking) {
+    return (
+      <Shell>
+        <div className={styles.empty}>
+          <h1 className="text-2xl font-bold">Booking not found</h1>
+          <Link to="/customer/units" className={`${styles.button} mt-4`}>Xem danh sách đơn đặt kho của tôi</Link>
+        </div>
+      </Shell>
+    )
+  }
 
   return (
     <Shell>
-      <Link className={styles.back} to="/customer/units">← My Bookings</Link>
-      <div className={styles.heading}>
-        <span className={styles.kicker}>{kicker}</span>
-        <h1 className="text-3xl font-bold tracking-tight max-[680px]:text-2xl">{title}</h1>
-        <p>{booking.status === 'pending' ? 'Next step: simulate payment to confirm your preview booking.' : 'This status only applies to the browser preview.'}</p>
-      </div>
-      {error && <ErrorNotice message={error} />}
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1.65fr_1fr] lg:gap-7">
-        <div className={styles.panel}>
-          <span className={`${styles.status} ${statusClass(booking.status)}`}>{labels[booking.status]}</span>
-          <h2 className="mt-3 text-xl font-semibold">{unit.name} · {unit.facility}</h2>
-          {booking.contract && (
-            <section className="my-6 rounded-xl border border-slate-300 bg-slate-50 p-4 sm:p-6">
-              <span className={styles.kicker}>SIGNED AGREEMENT · PREVIEW</span>
-              <h3 className="mt-2 text-base font-semibold">Signature saved</h3>
-              <p className="my-3 text-sm leading-relaxed text-slate-600">Signed by: <strong>{booking.contract.signedName}</strong><br />Signed at: {new Date(booking.contract.signedAt).toLocaleString('en-GB')}<br />Version: 1.0</p>
-              <p className="text-[11px] text-slate-500">Your typed signature is saved with this booking on this browser.</p>
-            </section>
-          )}
-          <dl className={styles.review}>
-            <div><dt>Booking ID</dt><dd className="break-all text-[10px]">{booking.id}</dd></div>
-            <div><dt>Start date</dt><dd>{formatDate(booking.startDate)}</dd></div>
-            <div><dt>End date (exclusive)</dt><dd>{formatDate(booking.endDate)}</dd></div>
-            <div><dt>Duration</dt><dd>{booking.months} {booking.months === 1 ? 'month' : 'months'}</dd></div>
-            <div><dt>Renter</dt><dd>{booking.fullName}</dd></div>
-            <div><dt>Contact</dt><dd>{booking.email}<br />{booking.phone}</dd></div>
-            {booking.notes && <div><dt>Notes</dt><dd>{booking.notes}</dd></div>}
-          </dl>
-          {booking.status === 'confirmed' && <div className={`${styles.calloutSuccess} my-5`}><strong>Payment simulation complete.</strong><p className="mt-1.5">No real transaction was made. The facility will provide handover and access instructions when connected. This preview does not issue PINs or access rights.</p></div>}
-          {booking.status !== 'cancelled' && (
-            <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-              {booking.status === 'pending' && <button type="button" className={styles.button} onClick={() => setPaymentOpen(true)}>Simulate payment</button>}
-              <button type="button" className={styles.textBtnDanger} disabled={busy} onClick={() => setCancelOpen(true)}>Cancel preview booking</button>
-            </div>
-          )}
-          <Link className={styles.textBtn} to="/storage">Continue exploring →</Link>
+      <div className={styles.panel}>
+        <div className={styles.calloutSuccess}>
+          <h1 className="text-xl font-bold mb-1">Đặt kho thành công!</h1>
+          <p>Mã đơn hàng: <strong>{booking.id || bookingId}</strong></p>
         </div>
-        <aside className={`${styles.panel} sticky top-[100px] max-[680px]:static`}>
-          <img src={unit.image} alt={unit.name} className="mb-5 h-[175px] w-full rounded-lg object-cover" />
-          <h2 className="text-lg font-semibold">Preview costs</h2>
-          <dl className="mt-5">
-            <div className="flex justify-between gap-4 border-b border-slate-100 py-2.5 text-xs"><dt className="text-slate-500">Rent</dt><dd className="m-0 font-semibold whitespace-nowrap">{money(booking.rentalTotal)}</dd></div>
-            <div className="flex justify-between gap-4 border-b border-slate-100 py-2.5 text-xs"><dt className="text-slate-500">Sample deposit</dt><dd className="m-0 font-semibold whitespace-nowrap">{money(booking.deposit)}</dd></div>
-            <div className="mt-2 flex justify-between gap-4 border-t border-slate-200 pt-4 text-base font-semibold"><dt>Total</dt><dd className="m-0 whitespace-nowrap">{money(booking.total)}</dd></div>
-          </dl>
-          {booking.paymentId && <p className="mt-3 text-[11px] text-slate-500">Preview payment ID: <span className="break-all text-[10px]">{booking.paymentId}</span></p>}
-          {paymentOpen && booking.status === 'pending' && (
-            <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 p-5">
-              <h3 className="text-sm font-semibold">Confirm payment simulation</h3>
-              <p className="my-2.5 text-xs text-slate-600">This only updates preview booking status. No card details or money transfers are required.</p>
-              <button type="button" className={`${styles.button} w-full`} disabled={busy} onClick={() => action('pay')}>{busy ? 'Processing…' : 'Simulate successful payment'}</button>
-              <button type="button" className={styles.textBtn} onClick={() => setPaymentOpen(false)}>Later</button>
-            </div>
-          )}
-          <Link className={styles.textBtn} to="/customer/payments">Payment history →</Link>
-        </aside>
+
+        <div className={styles.review}>
+          <div><dt>Họ và tên</dt><dd>{booking.fullName || booking.customerName}</dd></div>
+          <div><dt>Mã kho</dt><dd>{booking.unitCode || booking.unitId || 'Đang chờ phân bổ'}</dd></div>
+          <div><dt>Ngày bắt đầu</dt><dd>{formatDate(booking.startDate)}</dd></div>
+          <div><dt>Thời gian thuê</dt><dd>{booking.months || booking.rentalMonths} tháng</dd></div>
+          <div><dt>Trạng thái</dt><dd><span className={statusClass('confirmed')}>Đã xác nhận</span></dd></div>
+        </div>
+
+        <Link to="/customer/units" className={styles.button}>
+          Quản lý đơn thuê của tôi →
+        </Link>
       </div>
-      {cancelOpen && (
-        <dialog ref={cancelDialog} className="fixed inset-0 m-auto h-fit max-h-[calc(100dvh-40px)] w-[calc(100%-40px)] max-w-[500px] overflow-auto rounded-2xl border-0 p-7 text-slate-900 backdrop:bg-slate-900/60" aria-labelledby="cancel-title" onCancel={() => setCancelOpen(false)}>
-          <h2 id="cancel-title" className="text-xl font-semibold">Cancel this preview booking?</h2>
-          <p className="mt-4 text-sm leading-relaxed text-slate-500">The cancelled booking stays in your history. No real money is collected or refunded. The unit can be booked again in this preview.</p>
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-            <button type="button" autoFocus className={styles.buttonSecondary} onClick={() => setCancelOpen(false)}>Keep booking</button>
-            <button type="button" disabled={busy} className="inline-flex min-h-[46px] items-center justify-center rounded-lg bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-55" onClick={() => action('cancel')}>{busy ? 'Cancelling…' : 'Confirm cancellation'}</button>
-          </div>
-          {error && <ErrorNotice message={error} />}
-        </dialog>
-      )}
     </Shell>
   )
 }
 
 export function CustomerPaymentsPage() {
-  const { bookings, loading, error, refresh } = useBookings()
-  const paid = bookings.filter((b) => b.paymentId)
   return (
     <Shell>
-      <div className={styles.heading}>
-        <span className={styles.kicker}>PREVIEW HISTORY</span>
-        <h1 className="text-3xl font-bold tracking-tight max-[680px]:text-2xl">My Payments</h1>
-        <p>No bank transactions or real payments are made in this preview.</p>
-      </div>
-      {loading ? <Loading /> : error ? <ErrorNotice message={error} retry={refresh} /> : paid.length ? (
-        <div className={`${styles.panel} overflow-auto`}>
-          <table className="w-full min-w-[600px] border-collapse text-xs">
-            <caption className="mb-5 text-left text-lg font-semibold">Payment simulations</caption>
-            <thead><tr>{['Payment ID', 'Date', 'Sample amount', 'Booking status', 'Details'].map((h) => <th key={h} className="border-b border-slate-200 px-3 py-3.5 text-left text-[10px] font-medium whitespace-nowrap text-slate-500">{h}</th>)}</tr></thead>
-            <tbody>{paid.map((b) => (
-              <tr key={b.id}>
-                <td className="border-b border-slate-200 px-3 py-3.5 break-all text-[10px]">{b.paymentId}</td>
-                <td className="border-b border-slate-200 px-3 py-3.5">{new Date(b.paidAt!).toLocaleDateString('en-GB')}</td>
-                <td className="border-b border-slate-200 px-3 py-3.5">{money(b.total)}</td>
-                <td className="border-b border-slate-200 px-3 py-3.5">{labels[b.status]}</td>
-                <td className="border-b border-slate-200 px-3 py-3.5"><Link className="font-semibold text-blue-600" to={`/customer/bookings/${encodeURIComponent(b.id)}`}>View booking</Link></td>
-              </tr>
-            ))}</tbody>
-          </table>
-          <p className="mt-3 text-[11px] text-slate-500">Cancelled bookings retain their simulated transactions. No actual refunds are processed.</p>
+      <div className={styles.panel}>
+        <h1 className="text-xl font-bold mb-2">Lịch sử thanh toán</h1>
+        <p className="text-xs text-slate-500">Xem và quản lý toàn bộ các hóa đơn thanh toán tiền thuê kho.</p>
+        <div className="mt-6 rounded-lg border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500">
+          Chưa có giao dịch thanh toán phát sinh.
         </div>
-      ) : (
-        <div className={styles.empty}><h2 className="text-lg font-semibold">No payment simulations yet</h2><p>Open a pending booking to continue.</p><Link className={styles.button} to="/customer/units">View my bookings</Link></div>
-      )}
-    </Shell>
-  )
-}
-
-export function CustomerBookingDashboard() {
-  const { bookings, user, loading, error, refresh } = useBookings()
-  const active = bookings.filter((b) => b.status !== 'cancelled')
-  return (
-    <Shell>
-      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 sm:p-9">
-        <span className={styles.kicker}>SELFSTORAGE · YOUR SPACE</span>
-        <h1 className="my-3 text-3xl font-bold tracking-tight max-[680px]:text-2xl">Hello, {user?.fullName || 'there'}.</h1>
-        <p className="mb-5 text-sm text-slate-500">Find your space and follow your booking journey in one place.</p>
-        <Link className={styles.button} to="/storage">Find & book storage →</Link>
       </div>
-      <div className="mb-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5"><span className="text-[10px] text-slate-500">Active bookings</span><strong className="mt-2 block text-2xl font-semibold">{active.length}</strong></div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5"><span className="text-[10px] text-slate-500">Awaiting preview payment</span><strong className="mt-2 block text-2xl font-semibold">{active.filter((b) => b.status === 'pending').length}</strong></div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5"><span className="text-[10px] text-slate-500">Confirmed preview</span><strong className="mt-2 block text-2xl font-semibold">{active.filter((b) => b.status === 'confirmed').length}</strong></div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5"><span className="text-[10px] text-slate-500">Total simulated payments</span><strong className="mt-2 block break-all text-xl font-semibold sm:text-2xl">{money(bookings.filter((b) => b.paymentId).reduce((s, b) => s + b.total, 0))}</strong></div>
-      </div>
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold">Recent bookings</h2>
-        <Link className={styles.textBtn} to="/customer/units">View all →</Link>
-      </div>
-      {loading ? <Loading /> : error ? <ErrorNotice message={error} retry={refresh} /> : bookings.length ? (
-        <div className="grid gap-5">{bookings.slice(0, 3).map((b) => <BookingCard key={b.id} booking={b} />)}</div>
-      ) : (
-        <div className={styles.empty}><h2 className="text-lg font-semibold">A little space for your next chapter.</h2><p>No preview bookings yet. Start by choosing a unit.</p><Link className={styles.button} to="/storage">Explore preview units</Link></div>
-      )}
     </Shell>
   )
 }

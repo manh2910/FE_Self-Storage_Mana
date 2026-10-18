@@ -13,7 +13,7 @@ import AdminDashboard from '../features/admin/pages/AdminDashboard'
 import ProtectedRoute from '../features/auth/components/ProtectedRoute'
 import PublicStorageLayout from '../features/discovery/components/PublicStorageLayout'
 import { FacilitiesPage, FacilityDetailsPage, StorageUnitDetailsPage, PricingSizeGuidePage, HowItWorksPage } from '../features/discovery/pages/DiscoveryPages'
-import { BookingCheckoutPage, BookingConfirmationPage, CustomerBookingsPage, CustomerPaymentsPage } from '../features/booking/pages/BookingPages'
+import { BookingCheckoutPage, BookingConfirmationPage, CustomerBookingsPage, CustomerPaymentsPage, BrowseStoragePage } from '../features/booking/pages/BookingPages'
 
 const interactions = [
   'contents',
@@ -42,8 +42,10 @@ function App() {
           <Route path="/pricing" element={<PricingSizeGuidePage />} />
           <Route path="/how-it-works" element={<HowItWorksPage />} />
           <Route path="/faq" element={<Navigate to="/how-it-works#faq" replace />} />
-          <Route path="/storage" element={<CustomerDashboard />} />
-          <Route path="/booking" element={<CustomerDashboard />} />
+          
+          {/* Trỏ trực tiếp vào BrowseStoragePage để load dữ liệu từ SQL Server */}
+          <Route path="/storage" element={<BrowseStoragePage />} />
+          <Route path="/booking" element={<BrowseStoragePage />} />
         </Route>
 
         <Route path="/login" element={<LoginPage />} />
@@ -69,7 +71,6 @@ function App() {
           />
         </Route>
 
-
       {/* Staff Portal */}
       <Route
         path="/staff/*"
@@ -84,8 +85,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-
 
       {/* Operations Portal (Business Operations Manager) */}
       <Route
@@ -102,7 +101,6 @@ function App() {
         <Route path="/manager/staff" element={<FacilityWorkspacePage mode="staff" />} />
         <Route path="/manager/reports" element={<FacilityWorkspacePage mode="reports" />} />
         <Route path="/manager/*" element={<ManagerDashboard />} />
-
 
         <Route
           path="/operations/*"
