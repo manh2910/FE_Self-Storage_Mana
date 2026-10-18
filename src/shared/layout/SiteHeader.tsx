@@ -93,7 +93,13 @@ function useSlidingUnderline(nav: RefObject<HTMLElement>, route: string, open: b
 
 export default function SiteHeader() {
   const location = useLocation()
+
+  if (location.pathname === '/admin' || location.pathname.startsWith('/admin/')) {
+    return null
+  }
+
   if (location.pathname === '/operations' || location.pathname.startsWith('/operations/')) return null
+
   const isManager = location.pathname === '/manager' || location.pathname.startsWith('/manager/')
   const isBooking = ['/booking', '/storage', '/customer', '/customer/browse'].includes(location.pathname) || location.pathname.startsWith('/customer/book/')
   const [open, setOpen] = useState(false)

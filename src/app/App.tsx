@@ -113,14 +113,7 @@ function App() {
           }
         />
 
-        <Route
-          path="/admin/*"
-          element={
-            <ProtectedRoute allowedRoles={['SystemAdministrator']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin/*" element={<AdminDashboard />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
